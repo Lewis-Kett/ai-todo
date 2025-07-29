@@ -39,6 +39,17 @@ client<llm> GPT4 {
   }
 }
 
+// Faster client for insights
+client<llm> GPT4Fast {
+  provider "openai"
+  options {
+    model "gpt-4o"
+    api_key env.OPENAI_API_KEY
+    max_tokens 200
+    temperature 0.3
+  }
+}
+
 // Basic Chat Function
 function ChatWithAssistant(
   message: string,
@@ -93,21 +104,22 @@ function CreateSmartTodo(
 ) -> TodoItem {
   client GPT4
   prompt #"
-    Create a well-structured todo item based on the user's input.
-    Consider priority, category, and potential due dates.
-
+    Create a todo item from: {{ user_input }}
+    
     {% if existing_todos %}
-    Existing todos for context:
-    {% for todo in existing_todos %}
-    - {{ todo.text }} ({{ todo.category }}, {{ todo.priority }})
-    {% endfor %}
+    Context: {% for todo in existing_todos %}{{ todo.text }} ({{ todo.category }}, {{ todo.priority }}){% if not loop.last %}, {% endif %}{% endfor %}
     {% endif %}
-
-    User wants to create: {{ user_input }}
 
     {{ ctx.output_format() }}
 
-    Generate a complete todo item with appropriate defaults.
+    Rules:
+    1. Required: id, text, completed (false), priority ("high"/"medium"/"low")
+    2. Priority: "high" for urgent/critical/explicit urgency, "medium" for important, "low" for non-urgent
+    3. Category: Only if clearly determinable (work/personal/health/learning/shopping), otherwise null
+    4. DueDate: Only if explicit time mentioned ("Friday"/"tomorrow"/"end of day"), otherwise null
+    5. Use JSON null (not "", "none", "N/A") for empty optional fields
+
+    Generic/vague tasks → category: null, no deadline → dueDate: null
   "#
 }
 
@@ -116,26 +128,14 @@ function GenerateProductivityInsights(
   todos: TodoItem[],
   timeframe: string
 ) -> string {
-  client GPT4
+  client GPT4Fast
   prompt #"
-    Analyze the user's todo list and provide productivity insights.
-
-    Todo items:
+    {{ timeframe }} summary:
     {% for todo in todos %}
-    - {{ todo.text }} (Priority: {{ todo.priority }}, Completed: {{ todo.completed }})
-      {% if todo.category %}Category: {{ todo.category }}{% endif %}
-      {% if todo.dueDate %}Due: {{ todo.dueDate }}{% endif %}
+    {{ "✓" if todo.completed else "○" }} {{ todo.text }} ({{ todo.priority }})
     {% endfor %}
 
-    Timeframe for analysis: {{ timeframe }}
-
-    Provide insights about:
-    - Task completion patterns
-    - Priority distribution
-    - Productivity suggestions
-    - Potential improvements
-
-    Keep the response concise and actionable.
+    Provide: completion rate, priority focus, one tip.
   "#
 }
 

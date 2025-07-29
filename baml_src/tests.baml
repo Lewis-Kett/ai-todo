@@ -447,9 +447,9 @@ test TestTodoNullCategory {
     user_input "Generic task without specific category"
     existing_todos []
   }
-  @@check( required_fields, {{ this.id|length > 0 and this.text|length > 0 }} )
-  @@check( category_handling, {{ this.category is defined == false or this.category|length > 0 }} )
-  @@assert({{ _.checks.required_fields }})
+  @@check( all_required_fields, {{ this.id|length > 0 and this.text|length > 0 and this.priority in ["low", "medium", "high"] and this.completed == false }} )
+  @@check( category_is_null, {{ this.category == None }} )
+  @@assert({{ _.checks.all_required_fields and _.checks.category_is_null }})
 }
 
 // Test boundary condition - null due date
@@ -459,9 +459,9 @@ test TestTodoNullDueDate {
     user_input "Task without specific deadline"
     existing_todos []
   }
-  @@check( required_fields, {{ this.id|length > 0 and this.text|length > 0 }} )
-  @@check( due_date_handling, {{ this.dueDate is defined == false or this.dueDate|length > 0 }} )
-  @@assert({{ _.checks.required_fields }})
+  @@check( all_required_fields, {{ this.id|length > 0 and this.text|length > 0 and this.priority in ["low", "medium", "high"] and this.completed == false }} )
+  @@check( due_date_is_null, {{ this.dueDate == None }} )
+  @@assert({{ _.checks.all_required_fields and _.checks.due_date_is_null }})
 }
 
 // Test mixed priority todos with context
