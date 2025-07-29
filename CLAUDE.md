@@ -69,6 +69,54 @@ Claude must always prioritize accessibility (A11Y) and semantic correctness when
 
 These accessibility standards are non-negotiable and must be implemented in all UI components and layouts.
 
+## Test-Driven Development (TDD)
+
+This project follows Test-Driven Development principles to ensure high-quality, maintainable code. TDD is a software development practice where tests are written before the implementation code.
+
+### The Red-Green-Refactor Cycle
+
+TDD follows a disciplined three-step cycle:
+
+1. **Red**: Write a failing test for the desired functionality
+2. **Green**: Write the minimum code necessary to make the test pass
+3. **Refactor**: Clean up and improve the code while keeping all tests green
+
+### The Three Laws of TDD
+
+Claude must adhere to Robert C. Martin's three laws of TDD:
+
+1. **First Law**: You are not allowed to write any production code unless it is to make a failing unit test pass
+2. **Second Law**: You are not allowed to write any more of a unit test than is sufficient to fail (compilation failures count as failures)
+3. **Third Law**: You are not allowed to write any more production code than is sufficient to pass the one failing unit test
+
+### TDD Best Practices
+
+- **Start Simple**: Begin with the most basic functionality and gradually build complexity
+- **One Test at a Time**: Focus on making one test pass before writing the next test
+- **Descriptive Test Names**: Use clear, descriptive test names that explain what behavior is being verified
+- **Small, Focused Tests**: Each test should verify a single aspect of functionality
+- **Test Behavior, Not Implementation**: Focus on what the code does, not how it does it
+- **Comprehensive Coverage**: Include happy path, edge cases, error conditions, and boundary values
+- **Refactor Fearlessly**: Use the safety net of tests to improve code design continuously
+
+### TDD Workflow for New Features
+
+When implementing new functionality:
+
+1. **Understand Requirements**: Clarify what the feature should do
+2. **Write the Test**: Create a failing test that describes the expected behavior
+3. **Run the Test**: Confirm it fails for the right reason (Red)
+4. **Implement**: Write minimal code to make the test pass (Green)
+5. **Refactor**: Improve code quality while maintaining test coverage
+6. **Repeat**: Continue the cycle for additional functionality
+
+### Integration with CI/CD
+
+TDD aligns perfectly with our automated quality checks:
+- Tests run automatically after code changes via hooks
+- Failing tests prevent code progression
+- Continuous feedback ensures code quality throughout development
+
 ## Testing Guidelines
 
 ### Test-Driven Development Principles

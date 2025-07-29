@@ -28,10 +28,10 @@ describe('Home Page', () => {
     render(<Home />)
     
     expect(screen.getByText('Tasks')).toBeInTheDocument()
-    expect(screen.getByText('3 pending')).toBeInTheDocument()
+    expect(screen.getByText('2 pending')).toBeInTheDocument()
   })
 
-  it('renders sample todo items', () => {
+  it('renders dynamic todo items from hook', () => {
     render(<Home />)
     
     expect(screen.getByText('Complete the project documentation')).toBeInTheDocument()
@@ -39,7 +39,7 @@ describe('Home Page', () => {
     expect(screen.getByText('Set up development environment')).toBeInTheDocument()
   })
 
-  it('renders task statistics', () => {
+  it('renders dynamic task statistics', () => {
     render(<Home />)
     
     expect(screen.getByText('2 tasks pending • 1 completed • 3 total')).toBeInTheDocument()
@@ -51,5 +51,18 @@ describe('Home Page', () => {
     expect(screen.getByRole('banner')).toBeInTheDocument() // header
     expect(screen.getByRole('main')).toBeInTheDocument() // main
     expect(screen.getByRole('contentinfo')).toBeInTheDocument() // footer
+  })
+
+  it('renders todo items with proper accessibility attributes', () => {
+    render(<Home />)
+    
+    const todoList = screen.getByRole('list', { name: /todo items/i })
+    expect(todoList).toBeInTheDocument()
+    
+    const checkboxes = screen.getAllByRole('checkbox')
+    expect(checkboxes).toHaveLength(3)
+    
+    const deleteButtons = screen.getAllByLabelText(/delete task:/i)
+    expect(deleteButtons).toHaveLength(3)
   })
 })
