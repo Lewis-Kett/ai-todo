@@ -138,3 +138,4 @@ function GenerateProductivityInsights(
     Keep the response concise and actionable.
   "#
 }
+

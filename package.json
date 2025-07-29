@@ -10,7 +10,8 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:baml": "baml-cli test"
   },
   "dependencies": {
     "@boundaryml/baml": "^0.202.1",
