@@ -133,7 +133,7 @@ export default function Home() {
         </section>
 
         {/* Stats Footer */}
-        <footer className="mt-6 text-center text-sm text-muted-foreground" role="status" aria-live="polite">
+        <footer className="mt-6 text-center text-sm text-muted-foreground" role="contentinfo" aria-live="polite">
           <p aria-label="Task statistics">2 tasks pending • 1 completed • 3 total</p>
         </footer>
       </main>

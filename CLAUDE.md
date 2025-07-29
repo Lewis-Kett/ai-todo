@@ -69,6 +69,21 @@ Claude must always prioritize accessibility (A11Y) and semantic correctness when
 
 These accessibility standards are non-negotiable and must be implemented in all UI components and layouts.
 
+## Testing Guidelines
+
+### Test-Driven Development Principles
+
+- **Code Quality Over Test Convenience**: Never modify production code solely to make tests pass. If a test fails due to implementation details, modify the test instead.
+- **Component Pattern Adherence**: Always prioritize following established patterns (like shadcn/ui component usage) over making tests simpler to write.
+- **Test Implementation Reality**: Tests should verify actual component behavior, not idealized behavior. For example, if shadcn/ui `CardTitle` renders as a `div` rather than a heading element, tests should reflect this reality.
+- **Semantic vs Implementation Testing**: When testing UI components, focus on user-visible behavior and accessibility rather than internal DOM structure. Use appropriate queries that match how users and assistive technologies interact with components.
+
+### Testing Commands
+
+- `npm run test` - Run all tests once
+- `npm run test:watch` - Run tests in watch mode during development  
+- `npm run test:coverage` - Generate test coverage report
+
 ## Commit Guidelines
 
 When creating commits, use only a single short commit message describing the changes. Do not include co-author information or additional formatting.
