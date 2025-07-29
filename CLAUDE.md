@@ -44,6 +44,16 @@ This is an AI-powered todo application built with Next.js 15, React 19, and Type
 - `npx shadcn@latest add button` - Example: add button component
 - Components are installed to `src/components/ui/` directory
 
+## Front-end Development Guidelines
+
+When performing front-end work, Claude should use the shadcn MCP server to:
+- Discover available shadcn/ui components with `mcp__shadcn__list_components`
+- Get component source code with `mcp__shadcn__get_component`
+- Get component demo/usage examples with `mcp__shadcn__get_component_demo`
+- Get component metadata with `mcp__shadcn__get_component_metadata`
+
+This ensures consistent UI patterns and proper component implementation.
+
 ## Commit Guidelines
 
 When creating commits, use only a single short commit message describing the changes. Do not include co-author information or additional formatting.
