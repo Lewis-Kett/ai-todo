@@ -54,6 +54,21 @@ When performing front-end work, Claude should use the shadcn MCP server to:
 
 This ensures consistent UI patterns and proper component implementation.
 
+### Accessibility & Semantic Markup Requirements
+
+Claude must always prioritize accessibility (A11Y) and semantic correctness when developing:
+
+- **Semantic HTML**: Use appropriate HTML elements for their intended purpose (e.g., `<button>` for interactive elements, `<main>` for primary content, `<nav>` for navigation)
+- **ARIA Labels**: Provide descriptive aria-labels for screen readers when content isn't self-explanatory
+- **Keyboard Navigation**: Ensure all interactive elements are keyboard accessible with proper focus management
+- **Color Contrast**: Maintain WCAG AA compliance for text and background color combinations
+- **Focus Indicators**: Provide clear visual focus indicators for keyboard navigation
+- **Screen Reader Support**: Structure content logically with proper heading hierarchy (h1-h6) and landmark elements
+- **Form Accessibility**: Include proper labels, error states, and validation messages for form inputs
+- **Alternative Text**: Provide meaningful alt text for images and icons that convey information
+
+These accessibility standards are non-negotiable and must be implemented in all UI components and layouts.
+
 ## Commit Guidelines
 
 When creating commits, use only a single short commit message describing the changes. Do not include co-author information or additional formatting.
