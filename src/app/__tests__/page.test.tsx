@@ -13,7 +13,7 @@ describe('Home Page', () => {
   it('renders the description text', () => {
     render(<Home />)
     
-    expect(screen.getByText('Manage your tasks efficiently')).toBeInTheDocument()
+    expect(screen.getByText('Manage your tasks efficiently with AI assistance')).toBeInTheDocument()
   })
 
   it('renders the add task form', () => {
@@ -64,5 +64,13 @@ describe('Home Page', () => {
     
     const deleteButtons = screen.getAllByLabelText(/delete task:/i)
     expect(deleteButtons).toHaveLength(3)
+  })
+
+  it('renders the chat interface', () => {
+    render(<Home />)
+    
+    expect(screen.getByRole('heading', { name: 'AI Assistant' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /chat message input/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument()
   })
 })
