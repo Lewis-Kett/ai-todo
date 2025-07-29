@@ -69,6 +69,76 @@ Claude must always prioritize accessibility (A11Y) and semantic correctness when
 
 These accessibility standards are non-negotiable and must be implemented in all UI components and layouts.
 
+## Software Development Principles
+
+### DRY Principle (Don't Repeat Yourself)
+
+Claude must strictly adhere to the DRY principle, which states that "Every piece of knowledge must have a single, unambiguous, authoritative representation within a system."
+
+**Core Guidelines:**
+- Eliminate code duplication through abstraction and reusable components
+- Extract common functionality into utility functions, custom hooks, or shared components
+- Use configuration objects and constants instead of repeating magic numbers or strings
+- Create reusable TypeScript types and interfaces to avoid duplicating type definitions
+- Implement shared validation logic, API calls, and business logic in centralized modules
+
+**Benefits:**
+- Reduces maintenance burden by requiring changes in only one location
+- Minimizes bugs caused by inconsistent updates across duplicated code
+- Improves code readability and reduces technical debt
+- Ensures consistent behavior across the application
+
+**Application in React/Next.js:**
+- Extract common UI patterns into reusable components
+- Use custom hooks for shared stateful logic
+- Create utility functions for common operations (formatting, validation, etc.)
+- Centralize API endpoints and data fetching logic
+- Share component prop types and interfaces
+
+### SOLID Principles
+
+Claude must follow the five SOLID principles of object-oriented design to create maintainable, flexible, and extensible code:
+
+#### 1. Single Responsibility Principle (SRP)
+- Each component, function, or class should have only one reason to change
+- Components should focus on a single piece of functionality
+- Separate concerns like data fetching, UI rendering, and business logic
+- Create focused utility functions that handle one specific task
+
+#### 2. Open/Closed Principle (OCP)
+- Code should be open for extension but closed for modification
+- Use composition over inheritance in React components
+- Design components to accept props and render props for extensibility
+- Create plugin-style architectures where new features can be added without changing existing code
+- Use TypeScript generics and interfaces to allow extension without modification
+
+#### 3. Liskov Substitution Principle (LSP)
+- Derived components should be substitutable for their base components
+- Ensure component interfaces are consistent and predictable
+- Maintain expected behavior when extending or wrapping components
+- Honor the contracts established by parent components or interfaces
+
+#### 4. Interface Segregation Principle (ISP)
+- Components should not depend on props they don't use
+- Create focused, minimal prop interfaces
+- Split large prop interfaces into smaller, specific ones
+- Use composition to combine multiple small interfaces when needed
+- Avoid forcing components to accept unnecessary dependencies
+
+#### 5. Dependency Inversion Principle (DIP)
+- High-level components should not depend on low-level implementation details
+- Depend on abstractions (interfaces, types) rather than concrete implementations
+- Use dependency injection patterns through props, context, or hooks
+- Abstract external dependencies (APIs, third-party libraries) behind interfaces
+- Design components to work with any implementation that satisfies the interface
+
+**SOLID Benefits:**
+- **Maintainability**: Code is easier to understand, modify, and extend
+- **Testability**: Components can be tested in isolation with mocked dependencies
+- **Flexibility**: New features can be added with minimal impact on existing code
+- **Reduced Coupling**: Components are loosely coupled and highly cohesive
+- **Better Architecture**: Promotes clean, scalable system design
+
 ## Test-Driven Development (TDD)
 
 This project follows Test-Driven Development principles to ensure high-quality, maintainable code. TDD is a software development practice where tests are written before the implementation code.
