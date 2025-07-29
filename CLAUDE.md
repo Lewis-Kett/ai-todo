@@ -84,10 +84,25 @@ These accessibility standards are non-negotiable and must be implemented in all 
 - `npm run test:watch` - Run tests in watch mode during development  
 - `npm run test:coverage` - Generate test coverage report
 
+### Automated Quality Checks
+
+**Automated Hook System**: Quality checks are automatically enforced via hooks:
+
+- **PostToolUse Hook**: Automatically runs after any `Write`, `Edit`, or `MultiEdit` operations
+- **Tests**: `npm run test` is executed to ensure all tests pass
+- **Linting**: `npm run lint` is executed to ensure code quality standards
+- **Failure Handling**: If either check fails, the hook reports the error and Claude must fix issues before proceeding
+
+Configuration files:
+- `.claude/settings.json` - Hook configuration
+- `.claude/hooks/quality-check.sh` - Quality check script
+
+This automated system ensures consistent code quality without manual intervention.
+
 ## Commit Guidelines
 
 When creating commits, use only a single short commit message describing the changes. Do not include co-author information or additional formatting.
 
 ## Current State
 
-This appears to be a fresh Next.js project that has been cleaned up from the default create-next-app template. The main page is currently empty, suggesting this is ready for AI todo functionality to be implemented.
+This is an AI-powered todo application with a complete UI implementation featuring shadcn/ui components, comprehensive test coverage with Jest and React Testing Library, and automated quality checks via hooks.
