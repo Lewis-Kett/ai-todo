@@ -12,6 +12,9 @@ This is an AI-powered todo application built with Next.js 15, React 19, and Type
 - `npm run build` - Build production bundle
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint for code quality checks
+- `npm run lint:fix` - Run ESLint and automatically fix issues
+- `npm run type-check` - Run TypeScript compiler to check for type errors
+- `npm run check` - Run both TypeScript type checking and ESLint (comprehensive check)
 
 ## Architecture
 
