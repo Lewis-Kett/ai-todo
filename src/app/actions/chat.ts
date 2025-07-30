@@ -1,11 +1,11 @@
 'use server'
 
-import { type ChatMessage } from '@/types/chat'
+import { type ChatMessage, type ApiResponse, type ChatResponse } from '@/types/chat'
 
 export async function sendChatMessage(
   message: string,
   conversationHistory: ChatMessage[] = []
-) {
+): Promise<ApiResponse<ChatResponse>> {
   // This is a mock implementation for now
   // Will be replaced with actual BAML integration in TASK 5
   try {

@@ -1,27 +1,22 @@
 'use client'
 
-import { createContext, useContext, useReducer, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useReducer, useCallback } from 'react'
 import { type ChatMessage } from '@/types/chat'
 import { sendChatMessage } from '@/app/actions/chat'
 import { generateId } from '@/lib/utils'
+import { 
+  createUserMessage, 
+  createAssistantMessageWithId,
+  createErrorMessage
+} from './ChatContext.helpers'
+import type { 
+  ChatState, 
+  ChatAction, 
+  ChatContextType, 
+  ChatDispatchContextType,
+  ChatProviderProps 
+} from './ChatContext.types'
 
-// Chat state interface
-interface ChatState {
-  messages: ChatMessage[]
-  isLoading: boolean
-  error: string | null
-  streamingMessageId?: string
-}
-
-// Action types for the reducer
-type ChatAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'ADD_MESSAGE'; payload: ChatMessage }
-  | { type: 'UPDATE_MESSAGE'; payload: { id: string; content: string } }
-  | { type: 'SET_MESSAGES'; payload: ChatMessage[] }
-  | { type: 'CLEAR_MESSAGES' }
-  | { type: 'SET_STREAMING_ID'; payload: string | undefined }
 
 // Initial state
 const initialState: ChatState = {
@@ -60,58 +55,33 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       }
     case 'SET_STREAMING_ID':
       return { ...state, streamingMessageId: action.payload }
+    case 'START_CHAT':
+      return { ...state, isLoading: true, error: null }
+    case 'COMPLETE_CHAT':
+      return { ...state, isLoading: false, streamingMessageId: undefined }
+    case 'CHAT_ERROR':
+      return { ...state, error: action.payload, isLoading: false, streamingMessageId: undefined }
     default:
       return state
   }
 }
 
-// Context types
-interface ChatContextType {
-  messages: ChatMessage[]
-  isLoading: boolean
-  error: string | null
-  streamingMessageId?: string
-  messageCount: number
-  hasMessages: boolean
-  lastMessage: ChatMessage | null
-}
-
-interface ChatDispatchContextType {
-  sendMessage: (content: string, conversationHistory?: ChatMessage[]) => Promise<unknown>
-  handleSendMessage: (content: string) => Promise<void>
-  clearMessages: () => void
-}
 
 // Create contexts
 const ChatContext = createContext<ChatContextType | null>(null)
 const ChatDispatchContext = createContext<ChatDispatchContextType | null>(null)
 
 // Provider component
-export function ChatProvider({ children }: { children: ReactNode }) {
+export function ChatProvider({ children }: ChatProviderProps) {
   const [state, dispatch] = useReducer(chatReducer, initialState)
 
-  // Helper functions for creating messages
-  const createUserMessage = useCallback((content: string): ChatMessage => ({
-    id: generateId(),
-    role: 'user',
-    content,
-    timestamp: new Date()
-  }), [])
-
-  const createAssistantMessage = useCallback((content: string = ''): ChatMessage => ({
-    id: generateId(),
-    role: 'assistant',
-    content,
-    timestamp: new Date()
-  }), [])
 
   // Unified sendMessage function - handles direct API calls (backward compatible)
   const sendMessage = useCallback(async (
     content: string,
     conversationHistory: ChatMessage[] = []
   ): Promise<unknown> => {
-    dispatch({ type: 'SET_LOADING', payload: true })
-    dispatch({ type: 'SET_ERROR', payload: null })
+    dispatch({ type: 'START_CHAT' })
 
     try {
       // Call server action with provided conversation history
@@ -121,61 +91,63 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         throw new Error(result.error || 'Failed to send message')
       }
 
+      dispatch({ type: 'COMPLETE_CHAT' })
       return result.data
       
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-      dispatch({ type: 'SET_ERROR', payload: errorMessage })
+      const errorMessage = createErrorMessage(err)
+      dispatch({ type: 'CHAT_ERROR', payload: errorMessage })
       throw err
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false })
     }
   }, [])
 
   // handleSendMessage for chat UI with message management
   const handleSendMessage = useCallback(async (content: string) => {
-    dispatch({ type: 'SET_LOADING', payload: true })
-    dispatch({ type: 'SET_ERROR', payload: null })
+    // Start chat session
+    dispatch({ type: 'START_CHAT' })
 
-    // Add user message immediately
+    // Add user message
     const userMessage = createUserMessage(content)
     dispatch({ type: 'ADD_MESSAGE', payload: userMessage })
     
-    try {
-      // Create placeholder assistant message for streaming
-      const assistantMessageId = generateId()
-      dispatch({ type: 'SET_STREAMING_ID', payload: assistantMessageId })
-      
-      const assistantMessage = createAssistantMessage('')
-      const assistantMessageWithId = { ...assistantMessage, id: assistantMessageId }
-      dispatch({ type: 'ADD_MESSAGE', payload: assistantMessageWithId })
+    // Setup assistant message for streaming
+    const assistantMessageId = generateId()
+    const assistantMessage = createAssistantMessageWithId(assistantMessageId, '')
+    
+    dispatch({ type: 'SET_STREAMING_ID', payload: assistantMessageId })
+    dispatch({ type: 'ADD_MESSAGE', payload: assistantMessage })
 
+    try {
       // Get current messages including the new user message for context
       const currentMessages = [...state.messages, userMessage]
       
-      // Call server action directly
+      // Call server action
       const result = await sendChatMessage(content, currentMessages)
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to send message')
       }
       
-      // Update the assistant message with the response
+      // Update assistant message with response
       const responseMessage = result.data?.message || 'No response received'
       dispatch({ type: 'UPDATE_MESSAGE', payload: { id: assistantMessageId, content: responseMessage } })
+      dispatch({ type: 'COMPLETE_CHAT' })
       
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-      dispatch({ type: 'SET_ERROR', payload: errorMessage })
+      // Handle error
+      const errorMessage = createErrorMessage(err)
+      dispatch({ type: 'CHAT_ERROR', payload: errorMessage })
       
-      // Add error message to chat
-      const errorChatMessage = createAssistantMessage('Sorry, I encountered an error. Please try again.')
-      dispatch({ type: 'ADD_MESSAGE', payload: errorChatMessage })
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false })
-      dispatch({ type: 'SET_STREAMING_ID', payload: undefined })
+      // Remove the placeholder assistant message on error
+      dispatch({ 
+        type: 'UPDATE_MESSAGE', 
+        payload: { 
+          id: assistantMessageId, 
+          content: 'Sorry, I encountered an error. Please try again.' 
+        } 
+      })
     }
-  }, [state.messages, createUserMessage, createAssistantMessage])
+  }, [state.messages])
 
   const clearMessages = useCallback(() => {
     dispatch({ type: 'CLEAR_MESSAGES' })
