@@ -25,7 +25,7 @@ Create `src/components/ui/chat/SmartCategories.tsx`:
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { type Todo } from '@/hooks/useTodos'
+import { type Todo } from '@/types/todo'
 
 interface SmartCategoriesProps {
   todos: Todo[]
@@ -109,7 +109,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { TrendingUp, Target, Clock, CheckCircle } from 'lucide-react'
-import { type Todo } from '@/hooks/useTodos'
+import { type Todo } from '@/types/todo'
 
 interface ProductivityAnalyticsProps {
   todos: Todo[]
@@ -224,7 +224,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Lightbulb, RefreshCw } from 'lucide-react'
-import { type Todo } from '@/hooks/useTodos'
+import { type Todo } from '@/types/todo'
 import { generateProductivityInsights } from '@/app/actions/todoAnalysis'
 
 interface AiSuggestionsProps {
@@ -370,8 +370,8 @@ import { TodoCommands } from '@/components/ui/chat/TodoCommands'
 import { SmartCategories } from '@/components/ui/chat/SmartCategories'
 import { ProductivityAnalytics } from '@/components/ui/chat/ProductivityAnalytics'
 import { AiSuggestions } from '@/components/ui/chat/AiSuggestions'
-import { useTodos } from '@/hooks/useTodos'
-import { useChat } from '@/hooks/useChat'
+import { useTodos } from '@/contexts/TodoContext'
+import { useChat } from '@/contexts/ChatContext'
 import { type TodoAction } from '@/types/chat'
 import { saveChatHistory, loadChatHistory } from '@/lib/chatStorage'
 import { Button } from '@/components/ui/button'

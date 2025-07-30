@@ -1,12 +1,16 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Home from '../page'
+import { AppProviders } from '@/components/providers/AppProviders'
 
 describe('Update Todo Feature', () => {
+  const renderWithProviders = (component: React.ReactElement) => {
+    return render(<AppProviders>{component}</AppProviders>)
+  }
   describe('Toggle Completion', () => {
     it('should toggle completion status when checkbox is clicked', async () => {
       const user = userEvent.setup()
-      render(<Home />)
+      renderWithProviders(<Home />)
       
       const checkbox = screen.getByRole('checkbox', { name: /complete the project documentation/i })
       expect(checkbox).not.toBeChecked()
@@ -19,7 +23,7 @@ describe('Update Todo Feature', () => {
 
     it('should update statistics when completing a todo', async () => {
       const user = userEvent.setup()
-      render(<Home />)
+      renderWithProviders(<Home />)
       
       expect(screen.getByText('2 tasks pending • 1 completed • 3 total')).toBeInTheDocument()
       
@@ -32,7 +36,7 @@ describe('Update Todo Feature', () => {
 
     it('should toggle from completed back to pending', async () => {
       const user = userEvent.setup()
-      render(<Home />)
+      renderWithProviders(<Home />)
       
       const completedCheckbox = screen.getByRole('checkbox', { name: /set up development environment/i })
       expect(completedCheckbox).toBeChecked()
@@ -48,7 +52,7 @@ describe('Update Todo Feature', () => {
   describe('Inline Edit Todo Name', () => {
     it('should allow editing todo name when double-clicked', async () => {
       const user = userEvent.setup()
-      render(<Home />)
+      renderWithProviders(<Home />)
       
       const todoLabel = screen.getByText('Complete the project documentation')
       await user.dblClick(todoLabel)
@@ -60,7 +64,7 @@ describe('Update Todo Feature', () => {
 
     it('should save changes when Enter is pressed', async () => {
       const user = userEvent.setup()
-      render(<Home />)
+      renderWithProviders(<Home />)
       
       const todoLabel = screen.getByText('Complete the project documentation')
       await user.dblClick(todoLabel)
@@ -76,7 +80,7 @@ describe('Update Todo Feature', () => {
 
     it('should cancel editing when Escape is pressed', async () => {
       const user = userEvent.setup()
-      render(<Home />)
+      renderWithProviders(<Home />)
       
       const todoLabel = screen.getByText('Complete the project documentation')
       await user.dblClick(todoLabel)
@@ -92,7 +96,7 @@ describe('Update Todo Feature', () => {
 
     it('should save changes when input loses focus', async () => {
       const user = userEvent.setup()
-      render(<Home />)
+      renderWithProviders(<Home />)
       
       const todoLabel = screen.getByText('Complete the project documentation')
       await user.dblClick(todoLabel)
@@ -109,7 +113,7 @@ describe('Update Todo Feature', () => {
 
     it('should not save empty or whitespace-only names', async () => {
       const user = userEvent.setup()
-      render(<Home />)
+      renderWithProviders(<Home />)
       
       const todoLabel = screen.getByText('Complete the project documentation')
       await user.dblClick(todoLabel)
@@ -126,7 +130,7 @@ describe('Update Todo Feature', () => {
   describe('Priority Selection', () => {
     it('should cycle through priorities on badge click', async () => {
       const user = userEvent.setup()
-      render(<Home />)
+      renderWithProviders(<Home />)
       
       // Find the specific todo group first
       const todoItem = screen.getByText('Complete the project documentation').closest('[role="group"]')
@@ -153,7 +157,7 @@ describe('Update Todo Feature', () => {
   describe('Category Selection', () => {
     it('should allow editing category inline on double-click', async () => {
       const user = userEvent.setup()
-      render(<Home />)
+      renderWithProviders(<Home />)
       
       // Find the specific todo and its category badge
       const todoItem = screen.getByText('Complete the project documentation').closest('[role="group"]')

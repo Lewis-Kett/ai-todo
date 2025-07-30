@@ -1,11 +1,16 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Home from '../page'
+import { AppProviders } from '@/components/providers/AppProviders'
 
 describe('Create Todo Feature', () => {
+  const renderWithProviders = (component: React.ReactElement) => {
+    return render(<AppProviders>{component}</AppProviders>)
+  }
+
   it('should create a new todo when form is submitted with valid input', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const input = screen.getByLabelText(/task description/i)
     const submitButton = screen.getByRole('button', { name: /add new task/i })
@@ -18,7 +23,7 @@ describe('Create Todo Feature', () => {
 
   it('should clear the input field after successful todo creation', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const input = screen.getByLabelText(/task description/i) as HTMLInputElement
     const submitButton = screen.getByRole('button', { name: /add new task/i })
@@ -31,7 +36,7 @@ describe('Create Todo Feature', () => {
 
   it('should update task statistics after creating a new todo', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const initialStats = screen.getByText('2 tasks pending • 1 completed • 3 total')
     expect(initialStats).toBeInTheDocument()
@@ -47,7 +52,7 @@ describe('Create Todo Feature', () => {
 
   it('should not create a todo with empty input', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const submitButton = screen.getByRole('button', { name: /add new task/i })
     const initialTodoCount = screen.getAllByRole('checkbox').length
@@ -60,7 +65,7 @@ describe('Create Todo Feature', () => {
 
   it('should not create a todo with only whitespace', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const input = screen.getByLabelText(/task description/i)
     const submitButton = screen.getByRole('button', { name: /add new task/i })
@@ -75,7 +80,7 @@ describe('Create Todo Feature', () => {
 
   it('should create todo with default priority and category', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const input = screen.getByLabelText(/task description/i)
     const submitButton = screen.getByRole('button', { name: /add new task/i })
@@ -93,7 +98,7 @@ describe('Create Todo Feature', () => {
 
   it('should handle form submission with Enter key', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const input = screen.getByLabelText(/task description/i)
     

@@ -21,7 +21,7 @@ Integrate the chat functionality with the existing todo system, enabling AI-powe
 Update `src/types/chat.ts` to include todo-specific types:
 
 ```typescript
-import { type Todo } from '@/hooks/useTodos'
+import { type Todo } from '@/types/todo'
 
 export interface ChatMessage {
   id: string
@@ -63,7 +63,7 @@ Update `src/hooks/useChat.ts`:
 
 import { useState, useCallback } from 'react'
 import { type ChatMessage, type TodoAction, type ChatContext } from '@/types/chat'
-import { type Todo } from '@/hooks/useTodos'
+import { type Todo } from '@/types/todo'
 import { sendChatMessage } from '@/app/actions/chat'
 import { analyzeTodoRequest, createSmartTodo } from '@/app/actions/todoAnalysis'
 
@@ -314,10 +314,10 @@ Create `src/app/todo-chat/page.tsx`:
 
 import { ChatInterface } from '@/components/ui/chat/ChatInterface'
 import { TodoCommands } from '@/components/ui/chat/TodoCommands'
-import { useTodos } from '@/hooks/useTodos'
-import { useChat } from '@/hooks/useChat'
+import { useTodos } from '@/contexts/TodoContext'
+import { useChat } from '@/contexts/ChatContext'
 import { type TodoAction } from '@/types/chat'
-import { type Todo } from '@/hooks/useTodos'
+import { type Todo } from '@/types/todo'
 
 export default function TodoChatPage() {
   const { todos, addTodo, updateTodo, deleteTodo } = useTodos()

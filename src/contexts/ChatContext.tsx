@@ -1,6 +1,6 @@
 'use client'
 
-import { useReducer, useCallback } from 'react'
+import { createContext, useContext, useReducer, useCallback, ReactNode } from 'react'
 import { type ChatMessage } from '@/types/chat'
 import { sendChatMessage } from '@/app/actions/chat'
 import { generateId } from '@/lib/utils'
@@ -65,7 +65,29 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
   }
 }
 
-export function useChat() {
+// Context types
+interface ChatContextType {
+  messages: ChatMessage[]
+  isLoading: boolean
+  error: string | null
+  streamingMessageId?: string
+  messageCount: number
+  hasMessages: boolean
+  lastMessage: ChatMessage | null
+}
+
+interface ChatDispatchContextType {
+  sendMessage: (content: string, conversationHistory?: ChatMessage[]) => Promise<unknown>
+  handleSendMessage: (content: string) => Promise<void>
+  clearMessages: () => void
+}
+
+// Create contexts
+const ChatContext = createContext<ChatContextType | null>(null)
+const ChatDispatchContext = createContext<ChatDispatchContextType | null>(null)
+
+// Provider component
+export function ChatProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(chatReducer, initialState)
 
   // Helper functions for creating messages
@@ -83,12 +105,11 @@ export function useChat() {
     timestamp: new Date()
   }), [])
 
-
   // Unified sendMessage function - handles direct API calls (backward compatible)
   const sendMessage = useCallback(async (
     content: string,
     conversationHistory: ChatMessage[] = []
-  ) => {
+  ): Promise<unknown> => {
     dispatch({ type: 'SET_LOADING', payload: true })
     dispatch({ type: 'SET_ERROR', payload: null })
 
@@ -160,29 +181,56 @@ export function useChat() {
     dispatch({ type: 'CLEAR_MESSAGES' })
   }, [])
 
-
-  // Simple computed properties (React will optimize these automatically)
+  // Computed properties
   const messageCount = state.messages.length
   const hasMessages = state.messages.length > 0
   const lastMessage = state.messages.length > 0 ? state.messages[state.messages.length - 1] : null
 
-  return {
-    // Essential state
+  const contextValue: ChatContextType = {
     messages: state.messages,
     isLoading: state.isLoading,
     error: state.error,
     streamingMessageId: state.streamingMessageId,
-    
-    // Computed properties
     messageCount,
     hasMessages,
-    lastMessage,
-    
-    // Core functions
-    sendMessage,
-    clearMessages,
-    
-    // Chat UI function
-    handleSendMessage
+    lastMessage
   }
+
+  const dispatchValue: ChatDispatchContextType = {
+    sendMessage,
+    handleSendMessage,
+    clearMessages
+  }
+
+  return (
+    <ChatContext.Provider value={contextValue}>
+      <ChatDispatchContext.Provider value={dispatchValue}>
+        {children}
+      </ChatDispatchContext.Provider>
+    </ChatContext.Provider>
+  )
+}
+
+// Custom hooks for consuming the contexts
+export function useChatState() {
+  const context = useContext(ChatContext)
+  if (!context) {
+    throw new Error('useChatState must be used within a ChatProvider')
+  }
+  return context
+}
+
+export function useChatDispatch() {
+  const context = useContext(ChatDispatchContext)
+  if (!context) {
+    throw new Error('useChatDispatch must be used within a ChatProvider')
+  }
+  return context
+}
+
+// Convenience hook that returns both state and dispatch
+export function useChat() {
+  const state = useChatState()
+  const dispatch = useChatDispatch()
+  return { ...state, ...dispatch }
 }

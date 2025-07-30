@@ -1,9 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import Home from '../page'
+import { AppProviders } from '@/components/providers/AppProviders'
 
 describe('Home Page', () => {
+  const renderWithProviders = (component: React.ReactElement) => {
+    return render(<AppProviders>{component}</AppProviders>)
+  }
+
   it('renders the main heading', () => {
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const heading = screen.getByRole('heading', { level: 1 })
     expect(heading).toBeInTheDocument()
@@ -11,13 +16,13 @@ describe('Home Page', () => {
   })
 
   it('renders the description text', () => {
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     expect(screen.getByText('Manage your tasks efficiently with AI assistance')).toBeInTheDocument()
   })
 
   it('renders the add task form', () => {
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     expect(screen.getByRole('form', { name: /add new task/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/task description/i)).toBeInTheDocument()
@@ -25,14 +30,14 @@ describe('Home Page', () => {
   })
 
   it('renders the tasks section', () => {
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     expect(screen.getByText('Tasks')).toBeInTheDocument()
     expect(screen.getByText('2 pending')).toBeInTheDocument()
   })
 
   it('renders dynamic todo items from hook', () => {
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     expect(screen.getByText('Complete the project documentation')).toBeInTheDocument()
     expect(screen.getByText('Review pull requests')).toBeInTheDocument()
@@ -40,13 +45,13 @@ describe('Home Page', () => {
   })
 
   it('renders dynamic task statistics', () => {
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     expect(screen.getByText('2 tasks pending • 1 completed • 3 total')).toBeInTheDocument()
   })
 
   it('has proper accessibility structure', () => {
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     expect(screen.getByRole('banner')).toBeInTheDocument() // header
     expect(screen.getByRole('main')).toBeInTheDocument() // main
@@ -54,7 +59,7 @@ describe('Home Page', () => {
   })
 
   it('renders todo items with proper accessibility attributes', () => {
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const todoList = screen.getByRole('list', { name: /todo items/i })
     expect(todoList).toBeInTheDocument()
@@ -67,7 +72,7 @@ describe('Home Page', () => {
   })
 
   it('renders the chat interface', () => {
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     expect(screen.getByRole('heading', { name: 'AI Assistant' })).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: /chat message input/i })).toBeInTheDocument()

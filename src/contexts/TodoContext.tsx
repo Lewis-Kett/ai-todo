@@ -1,7 +1,7 @@
 'use client'
 
-import { useReducer, useCallback } from 'react';
-import { Todo, TodoFormData } from '@/types/todo';
+import { createContext, useContext, useReducer, useCallback, ReactNode } from 'react'
+import { Todo, TodoFormData } from '@/types/todo'
 
 // Todo state interface
 interface TodosState {
@@ -98,11 +98,32 @@ function todosReducer(state: TodosState, action: TodoAction): TodosState {
   }
 }
 
-export function useTodos() {
+// Context types
+interface TodoContextType {
+  todos: Todo[]
+  completedCount: number
+  pendingCount: number
+  totalCount: number
+}
+
+interface TodoDispatchContextType {
+  addTodo: (formData: TodoFormData) => void
+  deleteTodo: (id: string) => void
+  updateTodo: (id: string, updates: Partial<Omit<Todo, 'id' | 'createdAt'>>) => void
+  toggleComplete: (id: string) => void
+  setTodos: (todos: Todo[]) => void
+}
+
+// Create contexts
+const TodoContext = createContext<TodoContextType | null>(null)
+const TodoDispatchContext = createContext<TodoDispatchContextType | null>(null)
+
+// Provider component
+export function TodoProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(todosReducer, initialState)
+  const { todos } = state
 
-  const { todos } = state;
-
+  // Action creators
   const addTodo = useCallback((formData: TodoFormData) => {
     dispatch({ type: 'ADD_TODO', payload: formData })
   }, [])
@@ -119,18 +140,59 @@ export function useTodos() {
     dispatch({ type: 'TOGGLE_COMPLETE', payload: id })
   }, [])
 
-  // Simple computed properties (React will optimize these automatically)
+  const setTodos = useCallback((todos: Todo[]) => {
+    dispatch({ type: 'SET_TODOS', payload: todos })
+  }, [])
+
+  // Computed properties
   const completedCount = todos.filter(todo => todo.completed).length
   const pendingCount = todos.filter(todo => !todo.completed).length
+  const totalCount = todos.length
 
-  return {
+  const contextValue: TodoContextType = {
     todos,
+    completedCount,
+    pendingCount,
+    totalCount
+  }
+
+  const dispatchValue: TodoDispatchContextType = {
     addTodo,
     deleteTodo,
     updateTodo,
     toggleComplete,
-    completedCount,
-    pendingCount,
-    totalCount: todos.length,
+    setTodos
   }
+
+  return (
+    <TodoContext.Provider value={contextValue}>
+      <TodoDispatchContext.Provider value={dispatchValue}>
+        {children}
+      </TodoDispatchContext.Provider>
+    </TodoContext.Provider>
+  )
+}
+
+// Custom hooks for consuming the contexts
+export function useTodoState() {
+  const context = useContext(TodoContext)
+  if (!context) {
+    throw new Error('useTodoState must be used within a TodoProvider')
+  }
+  return context
+}
+
+export function useTodoDispatch() {
+  const context = useContext(TodoDispatchContext)
+  if (!context) {
+    throw new Error('useTodoDispatch must be used within a TodoProvider')
+  }
+  return context
+}
+
+// Convenience hook that returns both state and dispatch
+export function useTodos() {
+  const state = useTodoState()
+  const dispatch = useTodoDispatch()
+  return { ...state, ...dispatch }
 }

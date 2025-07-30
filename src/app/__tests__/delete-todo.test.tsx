@@ -1,11 +1,16 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Home from '../page'
+import { AppProviders } from '@/components/providers/AppProviders'
 
 describe('Delete Todo Feature', () => {
+  const renderWithProviders = (component: React.ReactElement) => {
+    return render(<AppProviders>{component}</AppProviders>)
+  }
+
   it('should delete a todo when delete button is clicked', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     expect(screen.getByText('Complete the project documentation')).toBeInTheDocument()
     
@@ -17,7 +22,7 @@ describe('Delete Todo Feature', () => {
 
   it('should update task statistics after deleting a todo', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     expect(screen.getByText('2 tasks pending • 1 completed • 3 total')).toBeInTheDocument()
     
@@ -29,7 +34,7 @@ describe('Delete Todo Feature', () => {
 
   it('should delete a completed todo', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     expect(screen.getByText('Set up development environment')).toBeInTheDocument()
     
@@ -41,7 +46,7 @@ describe('Delete Todo Feature', () => {
 
   it('should update pending count when deleting a pending todo', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const pendingBadge = screen.getByText('2 pending')
     expect(pendingBadge).toBeInTheDocument()
@@ -54,7 +59,7 @@ describe('Delete Todo Feature', () => {
 
   it('should update completed count when deleting a completed todo', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     expect(screen.getByText('2 tasks pending • 1 completed • 3 total')).toBeInTheDocument()
     
@@ -66,7 +71,7 @@ describe('Delete Todo Feature', () => {
 
   it('should handle deleting all todos', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const deleteButtons = screen.getAllByLabelText(/delete task:/i)
     
@@ -80,7 +85,7 @@ describe('Delete Todo Feature', () => {
 
   it('should remove todo from accessibility tree when deleted', async () => {
     const user = userEvent.setup()
-    render(<Home />)
+    renderWithProviders(<Home />)
     
     const initialCheckboxes = screen.getAllByRole('checkbox')
     expect(initialCheckboxes).toHaveLength(3)

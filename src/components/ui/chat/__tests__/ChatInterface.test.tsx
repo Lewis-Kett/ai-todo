@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { ChatInterface } from '../ChatInterface'
-import { useChat } from '@/hooks/useChat'
+import { useChat } from '@/contexts/ChatContext'
+import { ChatProvider } from '@/contexts/ChatContext'
 
 interface MockChatMessagesProps {
   messages: unknown[]
@@ -14,13 +15,10 @@ interface MockChatInputProps {
   placeholder: string
 }
 
-interface MockCardProps {
-  children: React.ReactNode
-  className?: string
-}
 
-// Mock the useChat hook
-jest.mock('@/hooks/useChat', () => ({
+// Mock the useChat hook from context
+jest.mock('@/contexts/ChatContext', () => ({
+  ...jest.requireActual('@/contexts/ChatContext'),
   useChat: jest.fn()
 }))
 
@@ -51,13 +49,7 @@ jest.mock('../ChatInput', () => ({
   )
 }))
 
-jest.mock('@/components/ui/card', () => ({
-  Card: ({ children, className }: MockCardProps) => (
-    <div data-testid="card" className={className}>
-      {children}
-    </div>
-  )
-}))
+// No need to mock simple UI components - test the real rendered output
 
 const mockUseChat = useChat as jest.MockedFunction<typeof useChat>
 
@@ -79,20 +71,40 @@ describe('ChatInterface', () => {
   })
 
   it('renders with default structure', () => {
-    render(<ChatInterface />)
+    render(
+      <ChatProvider>
+        <ChatInterface />
+      </ChatProvider>
+    )
     
-    expect(screen.getByTestId('card')).toBeInTheDocument()
-    expect(screen.getByText('AI Assistant')).toBeInTheDocument()
+    // Test semantic structure and user-visible content
+    expect(screen.getByRole('heading', { name: 'AI Assistant' })).toBeInTheDocument()
     expect(screen.getByText('0 messages')).toBeInTheDocument()
     expect(screen.getByTestId('chat-messages')).toBeInTheDocument()
     expect(screen.getByTestId('chat-input')).toBeInTheDocument()
+    
+    // Verify actual DOM structure using data-slot attributes from card components
+    const cardElement = screen.getByRole('heading').closest('[data-slot="card"]')
+    expect(cardElement).toBeInTheDocument()
+    expect(cardElement).toHaveClass('flex', 'flex-col', 'h-[600px]')
+    
+    const headerElement = screen.getByRole('heading').closest('[data-slot="card-header"]')
+    expect(headerElement).toBeInTheDocument()
+    
+    const contentElement = document.querySelector('[data-slot="card-content"]')
+    expect(contentElement).toBeInTheDocument()
   })
 
-  it('applies custom className', () => {
-    render(<ChatInterface className="custom-class" />)
+  it('applies custom className to the card', () => {
+    render(
+      <ChatProvider>
+        <ChatInterface className="custom-class" />
+      </ChatProvider>
+    )
     
-    const card = screen.getByTestId('card')
-    expect(card).toHaveClass('custom-class')
+    // The className should be applied to the Card component
+    const cardElement = screen.getByRole('heading').closest('[data-slot="card"]')
+    expect(cardElement).toHaveClass('custom-class')
   })
 
   it('shows correct message count from hook', () => {
@@ -109,13 +121,21 @@ describe('ChatInterface', () => {
       clearMessages: jest.fn(),
     })
     
-    render(<ChatInterface />)
+    render(
+      <ChatProvider>
+        <ChatInterface />
+      </ChatProvider>
+    )
     
     expect(screen.getByText('5 messages')).toBeInTheDocument()
   })
 
   it('passes correct placeholder to ChatInput', () => {
-    render(<ChatInterface />)
+    render(
+      <ChatProvider>
+        <ChatInterface />
+      </ChatProvider>
+    )
     
     expect(screen.getByTestId('input-placeholder')).toHaveTextContent('Ask me about your todos or productivity...')
   })
@@ -135,7 +155,11 @@ describe('ChatInterface', () => {
       clearMessages: jest.fn(),
     })
     
-    render(<ChatInterface />)
+    render(
+      <ChatProvider>
+        <ChatInterface />
+      </ChatProvider>
+    )
     
     // The handleSendMessage should be passed to ChatInput
     expect(screen.getByTestId('chat-input')).toBeInTheDocument()
@@ -155,7 +179,11 @@ describe('ChatInterface', () => {
       clearMessages: jest.fn(),
     })
     
-    render(<ChatInterface />)
+    render(
+      <ChatProvider>
+        <ChatInterface />
+      </ChatProvider>
+    )
     
     expect(screen.getByTestId('is-loading')).toHaveTextContent('true')
     expect(screen.getByTestId('input-disabled')).toHaveTextContent('true')
@@ -175,7 +203,11 @@ describe('ChatInterface', () => {
       clearMessages: jest.fn(),
     })
     
-    render(<ChatInterface />)
+    render(
+      <ChatProvider>
+        <ChatInterface />
+      </ChatProvider>
+    )
     
     expect(screen.getByTestId('streaming-id')).toHaveTextContent('test-streaming-id')
   })

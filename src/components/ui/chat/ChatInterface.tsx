@@ -1,9 +1,9 @@
 'use client'
 
-import { Card } from '@/components/ui/card'
+import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { ChatMessages } from './ChatMessages'
 import { ChatInput } from './ChatInput'
-import { useChat } from '@/hooks/useChat'
+import { useChat } from '@/contexts/ChatContext'
 
 interface ChatInterfaceProps {
   className?: string
@@ -20,24 +20,26 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
 
   return (
     <Card className={`flex flex-col h-[600px] ${className || ''}`}>
-      <div className="flex items-center justify-between p-4 border-b">
-        <h2 className="text-lg font-semibold" id='chat-heading'>AI Assistant</h2>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b">
+        <h2 className="leading-none font-semibold" id='chat-heading'>AI Assistant</h2>
         <div className="text-sm text-muted-foreground">
           {messageCount} messages
         </div>
-      </div>
+      </CardHeader>
       
-      <ChatMessages 
-        messages={messages}
-        streamingMessageId={streamingMessageId}
-        isLoading={isLoading}
-      />
-      
-      <ChatInput 
-        onSendMessage={handleSendMessage}
-        disabled={isLoading}
-        placeholder="Ask me about your todos or productivity..."
-      />
+      <CardContent className="flex-1 flex flex-col p-0">
+        <ChatMessages 
+          messages={messages}
+          streamingMessageId={streamingMessageId}
+          isLoading={isLoading}
+        />
+        
+        <ChatInput 
+          onSendMessage={handleSendMessage}
+          disabled={isLoading}
+          placeholder="Ask me about your todos or productivity..."
+        />
+      </CardContent>
     </Card>
   )
 }
