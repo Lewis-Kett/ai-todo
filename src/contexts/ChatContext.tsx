@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useReducer, useCallback } from 'react'
 import { type ChatMessage } from '@/types/chat'
-import { sendChatMessage } from '@/app/actions/chat'
+import { sendChatMessage } from '@/actions/chat'
 import { generateId } from '@/lib/utils'
 import { 
   createUserMessage, 

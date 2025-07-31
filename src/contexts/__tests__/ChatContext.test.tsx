@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react'
 import { ReactNode } from 'react'
 import { ChatProvider, useChat, useChatState, useChatDispatch } from '../ChatContext'
-import { sendChatMessage } from '@/app/actions/chat'
+import { sendChatMessage } from '@/actions/chat'
 import { generateId } from '@/lib/utils'
 
 // Mock the server action
