@@ -224,221 +224,16 @@ export async function sendChatMessage(
 }
 ```
 
-### Step 4: Create Enhanced Chat Hook with Todo Integration
+### Step 4: Update Main Page
 
-#### 4.1 Create Integrated Chat Hook
-**File**: `src/hooks/useTodoChat.ts` (new file)
-
-```typescript
-'use client'
-
-import { useCallback } from 'react'
-import { useChatDispatch, useChatState } from '@/contexts/ChatContext'
-import { useTodos } from '@/contexts/TodoContext'
-import { analyzeTodoRequest, createSmartTodo } from '@/app/actions/todoAnalysis'
-import { sendChatMessage } from '@/app/actions/chat'
-import { type TodoAction, type ChatContext } from '@/types/chat'
-
-export function useTodoChat() {
-  const chatState = useChatState()
-  const { sendMessage: baseSendMessage, handleSendMessage } = useChatDispatch()
-  const { todos, addTodo, updateTodo, deleteTodo, toggleComplete } = useTodos()
-
-  const executeTodoAction = useCallback(async (action: TodoAction) => {
-    switch (action.action) {
-      case 'create':
-        if (action.todo) {
-          addTodo({
-            name: action.todo.name,
-            category: action.todo.category,
-            priority: action.todo.priority
-          })
-        }
-        break
-      case 'update':
-        if (action.todo) {
-          updateTodo(action.todo.id, {
-            name: action.todo.name,
-            category: action.todo.category,
-            priority: action.todo.priority
-          })
-        }
-        break
-      case 'complete':
-        if (action.todo) {
-          toggleComplete(action.todo.id)
-        }
-        break
-      case 'delete':
-        if (action.todo) {
-          deleteTodo(action.todo.id)
-        }
-        break
-    }
-  }, [addTodo, updateTodo, deleteTodo, toggleComplete])
-
-  const sendMessageWithTodoContext = useCallback(async (content: string) => {
-    try {
-      // First, analyze if this is a todo-related request
-      const todoAnalysis = await analyzeTodoRequest(content, todos)
-      
-      if (todoAnalysis.success && todoAnalysis.data && todoAnalysis.data.action !== 'analyze') {
-        // Execute the todo action
-        await executeTodoAction(todoAnalysis.data)
-        
-        // Generate response about the action taken
-        const actionResponse = generateActionResponse(todoAnalysis.data)
-        
-        // Add the response to chat (using existing chat context)
-        // This simulates a successful chat interaction
-        return {
-          message: actionResponse,
-          todoActions: [todoAnalysis.data]
-        }
-      } else {
-        // Regular chat with todo context
-        const chatContext: ChatContext = { 
-          todos, 
-          recentActions: [] 
-        }
-        
-        // Use existing chat system but with todo context
-        const result = await sendChatMessage(content, chatState.messages, chatContext)
-        
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to send message')
-        }
-
-        return result.data
-      }
-    } catch (error) {
-      console.error('Todo chat error:', error)
-      throw error
-    }
-  }, [todos, chatState.messages, executeTodoAction])
-
-  const sendTodoMessage = useCallback(async (content: string) => {
-    // Use the existing handleSendMessage but intercept with todo logic
-    await handleSendMessage(content)
-  }, [handleSendMessage])
-
-  return {
-    ...chatState,
-    sendMessageWithTodoContext,
-    sendTodoMessage,
-    executeTodoAction
-  }
-}
-
-function generateActionResponse(action: TodoAction): string {
-  const todoName = action.todo?.name || 'item'
-  
-  switch (action.action) {
-    case 'create':
-      return `✅ Created todo: "${todoName}". ${action.reasoning}`
-    case 'update':
-      return `📝 Updated todo: "${todoName}". ${action.reasoning}`
-    case 'complete':
-      return `🎉 Completed todo: "${todoName}". ${action.reasoning}`
-    case 'delete':
-      return `🗑️ Deleted todo: "${todoName}". ${action.reasoning}`
-    default:
-      return `✨ ${action.reasoning}`
-  }
-}
-```
-
-### Step 5: Create Todo Commands Component
-
-#### 5.1 Quick Actions Component
-**File**: `src/components/ui/chat/TodoCommands.tsx` (new file)
-
-```tsx
-'use client'
-
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Plus, CheckCircle, BarChart3, Lightbulb } from 'lucide-react'
-
-interface TodoCommandsProps {
-  onCommand: (command: string) => void
-  todoCount: number
-  completedCount: number
-}
-
-export function TodoCommands({ onCommand, todoCount, completedCount }: TodoCommandsProps) {
-  const quickCommands = [
-    {
-      icon: Plus,
-      label: 'Add Todo',
-      command: 'Create a new todo for me',
-      description: 'Add a task to your list'
-    },
-    {
-      icon: CheckCircle,
-      label: 'Show Pending',
-      command: 'Show me my pending tasks',
-      description: 'View incomplete todos'
-    },
-    {
-      icon: BarChart3,
-      label: 'Progress Report',
-      command: 'Give me a productivity summary',
-      description: 'Analyze your progress'
-    },
-    {
-      icon: Lightbulb,
-      label: 'Suggestions',
-      command: 'What should I focus on today?',
-      description: 'Get AI recommendations'
-    }
-  ]
-
-  return (
-    <Card className="mb-4">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium">Quick Actions</CardTitle>
-        <div className="flex gap-2">
-          <Badge variant="secondary">{todoCount} total</Badge>
-          <Badge variant="default">{completedCount} completed</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {quickCommands.map((cmd, index) => {
-          const Icon = cmd.icon
-          return (
-            <Button
-              key={index}
-              variant="ghost"
-              className="w-full justify-start h-auto p-3"
-              onClick={() => onCommand(cmd.command)}
-            >
-              <Icon className="h-4 w-4 mr-3 text-muted-foreground" />
-              <div className="text-left">
-                <div className="font-medium text-sm">{cmd.label}</div>
-                <div className="text-xs text-muted-foreground">{cmd.description}</div>
-              </div>
-            </Button>
-          )
-        })}
-      </CardContent>
-    </Card>
-  )
-}
-```
-
-### Step 6: Update Main Page to Include Todo Integration
-
-#### 6.1 Enhance Home Page
+#### 4.1 Update Home Page
 **File**: `src/app/page.tsx`
 
-Update the existing page to include todo commands:
+Update the existing page to use the integrated chat with todo context:
 
 ```tsx
 import { TodoSection } from "@/components/todo/TodoSection"
 import { ChatInterface } from "@/components/ui/chat/ChatInterface"
-import { TodoChatSidebar } from "@/components/ui/chat/TodoChatSidebar"  // New component
 
 export default function Home() {
   return (
@@ -448,19 +243,12 @@ export default function Home() {
         <p className="text-muted-foreground text-center">Manage your tasks efficiently with AI assistance</p>
       </header>
 
-      <main className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-2">
+      <main className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div>
           <TodoSection />
         </div>
-        <div className="lg:col-span-2">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <ChatInterface />
-            </div>
-            <div className="lg:col-span-1">
-              <TodoChatSidebar />
-            </div>
-          </div>
+        <div>
+          <ChatInterface />
         </div>
       </main>
     </div>
@@ -468,154 +256,51 @@ export default function Home() {
 }
 ```
 
-#### 6.2 Create Todo Chat Sidebar
-**File**: `src/components/ui/chat/TodoChatSidebar.tsx` (new file)
+### Step 5: Testing Implementation
 
-```tsx
-'use client'
-
-import { TodoCommands } from './TodoCommands'
-import { useTodos } from '@/contexts/TodoContext'
-import { useChat } from '@/contexts/ChatContext'
-
-export function TodoChatSidebar() {
-  const { todos, completedCount, totalCount } = useTodos()
-  const { handleSendMessage } = useChat()
-
-  const handleQuickCommand = (command: string) => {
-    handleSendMessage(command)
-  }
-
-  const recentTodos = todos.slice(0, 5)
-
-  return (
-    <div className="space-y-4">
-      <TodoCommands
-        onCommand={handleQuickCommand}
-        todoCount={totalCount}
-        completedCount={completedCount}
-      />
-      
-      <div className="space-y-2">
-        <h3 className="font-medium text-sm">Recent Todos</h3>
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-          {recentTodos.map(todo => (
-            <div
-              key={todo.id}
-              className="p-2 bg-muted/50 rounded text-sm"
-            >
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    todo.completed ? 'bg-green-500' : 'bg-yellow-500'
-                  }`}
-                />
-                <span className={todo.completed ? 'line-through' : ''}>
-                  {todo.name}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-```
-
-### Step 7: Testing Implementation
-
-#### 7.1 Create Integration Tests
-**File**: `src/hooks/__tests__/useTodoChat.test.ts` (new file)
+#### 5.1 Create Integration Tests
+**File**: `src/app/actions/__tests__/todoAnalysis.test.ts` (new file)
 
 ```typescript
-import { renderHook, act } from '@testing-library/react'
-import { useTodoChat } from '../useTodoChat'
-import { TodoProvider } from '@/contexts/TodoContext'
-import { ChatProvider } from '@/contexts/ChatContext'
+import { analyzeTodoRequest, createSmartTodo } from '../todoAnalysis'
+import { type Todo } from '@/types/todo'
 
-// Mock the server actions
-jest.mock('@/app/actions/todoAnalysis')
-jest.mock('@/app/actions/chat')
+// Mock the BAML client
+jest.mock('../../../../baml_client', () => ({
+  b: {
+    AnalyzeTodoRequest: jest.fn(),
+    CreateSmartTodo: jest.fn()
+  }
+}))
 
-const Providers = ({ children }: { children: React.ReactNode }) => (
-  <TodoProvider>
-    <ChatProvider>
-      {children}
-    </ChatProvider>
-  </TodoProvider>
-)
-
-describe('useTodoChat', () => {
-  it('should execute todo actions correctly', async () => {
-    const { result } = renderHook(() => useTodoChat(), {
-      wrapper: Providers
-    })
-
-    // Test todo action execution
-    const mockAction = {
-      action: 'create' as const,
-      todo: {
-        id: '1',
-        name: 'Test todo',
-        category: 'Test',
-        priority: 'Medium Priority' as const,
-        completed: false,
-        createdAt: new Date()
-      },
-      reasoning: 'User requested new todo'
-    }
-
-    await act(async () => {
-      await result.current.executeTodoAction(mockAction)
-    })
-
-    // Verify the todo was added (check with todo context)
-    expect(result.current).toBeDefined()
-  })
-})
-```
-
-#### 7.2 Create TodoCommands Tests
-**File**: `src/components/ui/chat/__tests__/TodoCommands.test.tsx` (new file)
-
-```tsx
-import { render, screen, fireEvent } from '@testing-library/react'
-import { TodoCommands } from '../TodoCommands'
-
-describe('TodoCommands', () => {
-  const mockOnCommand = jest.fn()
-
+describe('todoAnalysis server actions', () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
 
-  it('renders todo stats correctly', () => {
-    render(
-      <TodoCommands
-        onCommand={mockOnCommand}
-        todoCount={5}
-        completedCount={2}
-      />
-    )
+  describe('analyzeTodoRequest', () => {
+    it('should analyze todo requests correctly', async () => {
+      const mockTodos: Todo[] = [{
+        id: '1',
+        name: 'Test todo',
+        category: 'Work',
+        priority: 'High Priority',
+        completed: false,
+        createdAt: new Date()
+      }]
 
-    expect(screen.getByText('5 total')).toBeInTheDocument()
-    expect(screen.getByText('2 completed')).toBeInTheDocument()
+      const result = await analyzeTodoRequest('Complete the test todo', mockTodos)
+      
+      expect(result.success).toBeDefined()
+    })
   })
 
-  it('calls onCommand when quick action is clicked', () => {
-    render(
-      <TodoCommands
-        onCommand={mockOnCommand}
-        todoCount={5}
-        completedCount={2}
-      />
-    )
-
-    const addTodoButton = screen.getByText('Add Todo')
-    fireEvent.click(addTodoButton)
-
-    expect(mockOnCommand).toHaveBeenCalledWith('Create a new todo for me')
+  describe('createSmartTodo', () => {
+    it('should create a smart todo from user input', async () => {
+      const result = await createSmartTodo('Buy groceries for dinner')
+      
+      expect(result.success).toBeDefined()
+    })
   })
 })
 ```
@@ -628,7 +313,6 @@ describe('TodoCommands', () => {
 - [ ] Chat can complete todos ("Mark exercise as done")
 - [ ] Chat can delete todos ("Remove the dentist task")
 - [ ] AI responses include current todo context
-- [ ] Quick action buttons work correctly
 - [ ] Real-time sync between todo list and chat
 - [ ] Error handling for invalid commands
 
@@ -656,8 +340,7 @@ describe('TodoCommands', () => {
 4. **Todo Deletion**: "Delete the task about calling the dentist"
 5. **Context Queries**: "What tasks should I focus on today?"
 6. **Progress Analysis**: "How am I doing with my tasks?"
-7. **Quick Actions**: Test all sidebar buttons
-8. **Error Handling**: Invalid commands and edge cases
+7. **Error Handling**: Invalid commands and edge cases
 
 ### Automated Testing
 - [ ] Run existing test suite to ensure no regressions
