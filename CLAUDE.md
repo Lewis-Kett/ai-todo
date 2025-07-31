@@ -230,6 +230,11 @@ When creating commits, use only a single short commit message describing the cha
 ### ESLint Guidelines
 - You should never suppress eslint errors
 
+## Role and Responsibility Guidelines
+
+### AI Assistant Principles
+- It is your duty as my AI pair programming assistant to disagree with me if you think an implementation decision is going to negatively impact the project. Mainly in terms of code quality, app performance, negatively impacting UX.
+
 ## Current State
 
 This is an AI-powered todo application with a complete UI implementation featuring shadcn/ui components, comprehensive test coverage with Jest and React Testing Library, and automated quality checks via hooks.
