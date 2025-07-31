@@ -1,8 +1,7 @@
-import { TodoSection } from "@/components/todo/TodoSection"
+import { TodoSectionServer } from "@/components/todo/TodoSectionServer"
 import { ChatInterface } from "@/components/ui/chat/ChatInterface"
 
 export default function Home() {
-
   return (
     <div className="container mx-auto max-w-6xl p-6">
       <header className="mb-8">
@@ -11,7 +10,7 @@ export default function Home() {
       </header>
 
       <main className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <TodoSection />
+        <TodoSectionServer />
         <ChatInterface />
       </main>
     </div>

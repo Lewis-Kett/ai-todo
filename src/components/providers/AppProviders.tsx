@@ -2,7 +2,6 @@
 
 import { ReactNode } from 'react'
 import { ThemeProvider } from '@/components/theme-provider'
-import { TodoProvider } from '@/contexts/TodoContext'
 import { ChatProvider } from '@/contexts/ChatContext'
 
 interface AppProvidersProps {
@@ -17,11 +16,9 @@ export function AppProviders({ children }: AppProvidersProps) {
       enableSystem
       disableTransitionOnChange
     >
-      <TodoProvider>
-        <ChatProvider>
-          {children}
-        </ChatProvider>
-      </TodoProvider>
+      <ChatProvider>
+        {children}
+      </ChatProvider>
     </ThemeProvider>
   )
 }

@@ -1,29 +1,36 @@
-import { useState } from 'react'
+'use client'
+
+import { useState, useTransition } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Plus } from "lucide-react"
-import { TodoFormData } from "@/types/todo"
+import { addTodo } from '@/actions/todo-actions'
+import { DEFAULT_TODO_CATEGORY, DEFAULT_TODO_PRIORITY } from '@/constants/todo'
 
-interface TodoFormProps {
-  onAddTodo: (formData: TodoFormData) => void;
-}
-
-export function TodoForm({ onAddTodo }: TodoFormProps) {
-  const [taskInput, setTaskInput] = useState('');
+export function TodoFormClient() {
+  const [taskInput, setTaskInput] = useState('')
+  const [isPending, startTransition] = useTransition()
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedInput = taskInput.trim();
+    e.preventDefault()
+    const trimmedInput = taskInput.trim()
     if (trimmedInput) {
-      onAddTodo({
-        name: trimmedInput,
-        category: 'General',
-        priority: 'Medium Priority'
-      });
-      setTaskInput('');
+      startTransition(async () => {
+        try {
+          await addTodo({
+            name: trimmedInput,
+            category: DEFAULT_TODO_CATEGORY,
+            priority: DEFAULT_TODO_PRIORITY
+          })
+          setTaskInput('')
+        } catch (error) {
+          console.error('Failed to add todo:', error)
+          // Keep the input value so user can retry
+        }
+      })
     }
-  };
+  }
 
   return (
     <section aria-labelledby="add-task-heading" className="mb-6">
@@ -44,14 +51,15 @@ export function TodoForm({ onAddTodo }: TodoFormProps) {
               aria-describedby="add-task-heading"
               value={taskInput}
               onChange={(e) => setTaskInput(e.target.value)}
+              disabled={isPending}
             />
-            <Button type="submit" aria-label="Add new task">
+            <Button type="submit" aria-label="Add new task" disabled={isPending}>
               <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
-              Add Task
+              {isPending ? 'Adding...' : 'Add Task'}
             </Button>
           </form>
         </CardContent>
       </Card>
     </section>
-  );
+  )
 }

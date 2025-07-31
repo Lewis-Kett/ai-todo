@@ -198,6 +198,7 @@ TDD aligns perfectly with our automated quality checks:
 - **Component Pattern Adherence**: Always prioritize following established patterns (like shadcn/ui component usage) over making tests simpler to write.
 - **Test Implementation Reality**: Tests should verify actual component behavior, not idealized behavior. For example, if shadcn/ui `CardTitle` renders as a `div` rather than a heading element, tests should reflect this reality.
 - **Semantic vs Implementation Testing**: When testing UI components, focus on user-visible behavior and accessibility rather than internal DOM structure. Use appropriate queries that match how users and assistive technologies interact with components.
+- **You should never skip tests**
 
 ### Testing Commands
 
@@ -223,6 +224,11 @@ This automated system ensures consistent code quality without manual interventio
 ## Commit Guidelines
 
 When creating commits, use only a single short commit message describing the changes. Do not include co-author information or additional formatting.
+
+## Coding Principles
+
+### ESLint Guidelines
+- You should never suppress eslint errors
 
 ## Current State
 
