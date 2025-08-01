@@ -34,8 +34,9 @@ let todos: Todo[] = [
 
 // Internal function to get todos without caching
 async function getTodosInternal(): Promise<Todo[]> {
-  // Simulate async database call
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  // Simulate async database call - configurable delay for testing
+  const delay = process.env.NODE_ENV === 'test' ? 0 : 1000
+  await new Promise(resolve => setTimeout(resolve, delay))
   return [...todos]
 }
 
