@@ -23,7 +23,7 @@ export function TodoFormClient() {
             category: DEFAULT_TODO_CATEGORY,
             priority: DEFAULT_TODO_PRIORITY
           })
-          setTaskInput('')
+          setTaskInput('') // Clear immediately for rapid input
         } catch (error) {
           console.error('Failed to add todo:', error)
           // Keep the input value so user can retry
@@ -47,14 +47,21 @@ export function TodoFormClient() {
             <Input 
               id="new-task-input"
               placeholder="Enter your task..." 
-              className="flex-1"
+              className="flex-1 transition-all duration-300 focus:scale-[1.02]"
               aria-describedby="add-task-heading"
               value={taskInput}
               onChange={(e) => setTaskInput(e.target.value)}
-              disabled={isPending}
+              // Keep input enabled for rapid entry
             />
-            <Button type="submit" aria-label="Add new task" disabled={isPending}>
-              <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
+            <Button 
+              type="submit" 
+              aria-label="Add new task" 
+              disabled={isPending}
+              className="transition-all duration-300 transform hover:scale-105 active:scale-95"
+            >
+              <Plus className={`h-4 w-4 mr-2 transition-transform duration-300 ${
+                isPending ? 'animate-spin' : ''
+              }`} aria-hidden="true" />
               {isPending ? 'Adding...' : 'Add Task'}
             </Button>
           </form>

@@ -16,8 +16,8 @@ interface TodoItemClientProps {
 
 export function TodoItemClient({ todo }: TodoItemClientProps) {
   const [optimisticTodo, updateOptimisticTodo] = useOptimistic(
-    todo,
-    (state: Todo, update: Partial<Todo>) => ({ ...state, ...update })
+    { ...todo, deleting: false },
+    (state: Todo & { deleting: boolean }, update: Partial<Todo & { deleting: boolean }>) => ({ ...state, ...update })
   )
   const [isPending, startTransition] = useTransition()
   
@@ -68,10 +68,14 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
 
   const handleDelete = () => {
     startTransition(async () => {
+      // Set deleting state optimistically
+      updateOptimisticTodo({ deleting: true })
       try {
         await deleteTodo(optimisticTodo.id)
       } catch (error) {
         console.error('Failed to delete todo:', error)
+        // Revert optimistic update on error
+        updateOptimisticTodo({ deleting: false })
       }
     })
   }
@@ -97,9 +101,11 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
 
   return (
     <div 
-      className={`flex items-center space-x-3 p-3 border rounded-lg transition-opacity ${
-        optimisticTodo.completed ? 'opacity-60' : ''
-      } ${isPending ? 'opacity-50' : ''}`} 
+      className={`flex items-center space-x-3 p-3 border rounded-lg transition-all duration-500 ease-out transform ${
+        optimisticTodo.completed ? 'opacity-60 scale-[0.98]' : 'scale-100'
+      } ${isPending && !optimisticTodo.deleting ? 'opacity-70 scale-[0.99]' : ''} ${
+        optimisticTodo.deleting ? 'opacity-0 scale-90 -translate-x-4 pointer-events-none' : 'translate-x-0'
+      } hover:scale-[1.01] hover:border-primary/20`} 
       role="group" 
       aria-labelledby={`task-${optimisticTodo.id}-label`}
     >
@@ -136,7 +142,11 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
         <div id={`task-${optimisticTodo.id}-meta`} className="flex gap-2 mt-1" aria-label="Task metadata">
           <Badge 
             variant={priorityVariant} 
-            className={`text-xs ${!optimisticTodo.completed && !isPending ? 'cursor-pointer' : ''}`}
+            className={`text-xs transition-all duration-300 transform ${
+              !optimisticTodo.completed && !isPending 
+                ? 'cursor-pointer hover:scale-105 active:scale-95' 
+                : ''
+            } ${isPending ? 'animate-pulse' : ''}`}
             onClick={cyclePriority}
           >
             {priorityText}
@@ -154,7 +164,11 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
           ) : (
             <Badge 
               variant="secondary" 
-              className={`text-xs ${!isPending ? 'cursor-pointer' : ''}`}
+              className={`text-xs transition-all duration-300 transform ${
+                !isPending 
+                  ? 'cursor-pointer hover:scale-105 active:scale-95' 
+                  : ''
+              } ${isPending ? 'animate-pulse' : ''}`}
               onDoubleClick={categoryEdit.startEditing}
             >
               {optimisticTodo.category}
@@ -168,8 +182,11 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
         onClick={handleDelete}
         aria-label={`Delete task: ${optimisticTodo.name}`}
         disabled={isPending}
+        className="transition-all duration-300 transform hover:scale-110 hover:text-destructive active:scale-95"
       >
-        <Trash2 className="h-4 w-4" aria-hidden="true" />
+        <Trash2 className={`h-4 w-4 transition-transform duration-300 ${
+          optimisticTodo.deleting ? 'animate-spin' : ''
+        }`} aria-hidden="true" />
       </Button>
     </div>
   )

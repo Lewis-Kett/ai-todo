@@ -1,5 +1,6 @@
 import { TodoSectionServer } from "@/components/todo/TodoSectionServer"
 import { ChatInterface } from "@/components/ui/chat/ChatInterface"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 
 export default function Home() {
   return (
@@ -10,8 +11,12 @@ export default function Home() {
       </header>
 
       <main className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <TodoSectionServer />
-        <ChatInterface />
+        <ErrorBoundary>
+          <TodoSectionServer />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <ChatInterface />
+        </ErrorBoundary>
       </main>
     </div>
   )

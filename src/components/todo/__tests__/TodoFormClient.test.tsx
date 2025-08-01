@@ -2,7 +2,7 @@
  * Integration tests for TodoFormClient
  * 
  * Following React/Next.js best practices for testing client components
- * that use server actions with useTransition and form handling
+ * that use server actions with useTransition and controlled form handling
  */
 
 import { render, screen, waitFor } from '@testing-library/react'
@@ -82,6 +82,7 @@ describe('TodoFormClient', () => {
       await user.type(input, 'Task to be cleared')
       await user.click(submitButton)
       
+      // With controlled inputs, clearing happens immediately
       await waitFor(() => {
         expect(input.value).toBe('')
       })
@@ -164,10 +165,12 @@ describe('TodoFormClient', () => {
       await user.type(input, 'Pending task')
       await user.click(submitButton)
       
-      // Should show loading state
+      // Should show loading state on button
       expect(screen.getByText('Adding...')).toBeInTheDocument()
-      expect(input).toBeDisabled()
       expect(submitButton).toBeDisabled()
+      
+      // Input stays enabled for rapid entry
+      expect(input).not.toBeDisabled()
       
       // Wait for submission to complete
       await waitFor(() => {
@@ -214,7 +217,7 @@ describe('TodoFormClient', () => {
       
       render(<TodoFormClient />)
       
-      const input = screen.getByLabelText(/task description/i)
+      const input = screen.getByLabelText(/task description/i) as HTMLInputElement
       const submitButton = screen.getByRole('button', { name: /add new task/i })
       
       await user.type(input, 'Task that will fail')
@@ -227,6 +230,10 @@ describe('TodoFormClient', () => {
         expect(submitButton).not.toBeDisabled()
       }, { timeout: 3000 })
       
+      // With controlled inputs on error, input value is preserved for retry
+      expect(input).toHaveValue('Task that will fail')
+      
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to add todo:', expect.any(Error))
       consoleErrorSpy.mockRestore()
     })
   })

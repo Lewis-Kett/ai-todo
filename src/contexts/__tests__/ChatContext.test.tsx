@@ -5,7 +5,7 @@ import { sendChatMessage } from '@/actions/chat'
 import { generateId } from '@/lib/utils'
 
 // Mock the server action
-jest.mock('@/app/actions/chat', () => ({
+jest.mock('@/actions/chat', () => ({
   sendChatMessage: jest.fn()
 }))
 

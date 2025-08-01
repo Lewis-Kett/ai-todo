@@ -114,7 +114,7 @@ describe('TodoItemClient', () => {
       
       // Should show pending styling
       const group = screen.getByRole('group')
-      expect(group).toHaveClass('opacity-50')
+      expect(group).toHaveClass('opacity-70')
     })
   })
 
