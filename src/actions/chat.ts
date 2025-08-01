@@ -1,26 +1,26 @@
 'use server'
 
 import { type ChatMessage, type ApiResponse, type ChatResponse } from '@/types/chat'
+import { b } from '../../baml_client'
+import { chatMessagesToBamlMessages } from '@/lib/baml-converters'
 
 export async function sendChatMessage(
   message: string,
   conversationHistory: ChatMessage[] = []
 ): Promise<ApiResponse<ChatResponse>> {
-  // This is a mock implementation for now
-  // Will be replaced with actual BAML integration in TASK 5
   try {
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Convert React ChatMessages to BAML Messages format
+    const bamlConversationHistory = chatMessagesToBamlMessages(conversationHistory)
     
-    // Log conversation history for future implementation
-    console.log('Conversation history:', conversationHistory)
+    // Call BAML ChatWithAssistant function
+    const response = await b.ChatWithAssistant(message, bamlConversationHistory)
     
     return {
       success: true,
       data: {
-        message: `You said: "${message}". This is a mock response.`,
-        confidence: 0.9,
-        suggestions: ['Continue the conversation', 'Ask about todos']
+        message: response.message,
+        confidence: response.confidence ?? undefined,
+        suggestions: response.suggestions ?? undefined
       }
     }
   } catch (error) {
