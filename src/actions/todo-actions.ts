@@ -1,6 +1,6 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidateTag, unstable_cache } from 'next/cache'
 import { Todo, TodoFormData } from '@/types/todo'
 
 // In a real app, this would be a database. For now, we'll simulate with a global variable.
@@ -32,11 +32,24 @@ let todos: Todo[] = [
   },
 ]
 
-export async function getTodos(): Promise<Todo[]> {
+// Internal function to get todos without caching
+async function getTodosInternal(): Promise<Todo[]> {
   // Simulate async database call
-  await new Promise(resolve => setTimeout(resolve, 10))
+  await new Promise(resolve => setTimeout(resolve, 1000))
   return [...todos]
 }
+
+// Cached version of getTodos with cache tags
+export const getTodos = unstable_cache(
+  async (): Promise<Todo[]> => {
+    return getTodosInternal()
+  },
+  ['todos'],
+  {
+    tags: ['todos'],
+    revalidate: 3600, // Cache for 1 hour, but can be invalidated earlier with tags
+  }
+)
 
 export async function addTodo(formData: TodoFormData): Promise<void> {
   const newTodo: Todo = {
@@ -49,12 +62,12 @@ export async function addTodo(formData: TodoFormData): Promise<void> {
   }
   
   todos.push(newTodo)
-  revalidatePath('/')
+  revalidateTag('todos')
 }
 
 export async function deleteTodo(id: string): Promise<void> {
   todos = todos.filter(todo => todo.id !== id)
-  revalidatePath('/')
+  revalidateTag('todos')
 }
 
 export async function toggleTodoComplete(id: string): Promise<void> {
@@ -63,7 +76,7 @@ export async function toggleTodoComplete(id: string): Promise<void> {
       ? { ...todo, completed: !todo.completed }
       : todo
   )
-  revalidatePath('/')
+  revalidateTag('todos')
 }
 
 export async function updateTodo(
@@ -75,18 +88,26 @@ export async function updateTodo(
       ? { ...todo, ...updates }
       : todo
   )
-  revalidatePath('/')
+  revalidateTag('todos')
 }
 
-export async function getTodoStats(): Promise<{
-  completedCount: number
-  pendingCount: number
-  totalCount: number
-}> {
-  const currentTodos = await getTodos()
-  return {
-    completedCount: currentTodos.filter(todo => todo.completed).length,
-    pendingCount: currentTodos.filter(todo => !todo.completed).length,
-    totalCount: currentTodos.length
+// Cached version of getTodoStats with cache tags
+export const getTodoStats = unstable_cache(
+  async (): Promise<{
+    completedCount: number
+    pendingCount: number
+    totalCount: number
+  }> => {
+    const currentTodos = await getTodosInternal()
+    return {
+      completedCount: currentTodos.filter(todo => todo.completed).length,
+      pendingCount: currentTodos.filter(todo => !todo.completed).length,
+      totalCount: currentTodos.length
+    }
+  },
+  ['todo-stats'],
+  {
+    tags: ['todos'], // Use same tag as getTodos since stats depend on todos
+    revalidate: 3600,
   }
-}
+)

@@ -8,13 +8,14 @@
 import { addTodo, deleteTodo, toggleTodoComplete, updateTodo, getTodos, getTodoStats } from '../todo-actions'
 import { TodoFormData } from '@/types/todo'
 
-// Mock revalidatePath since it's a Next.js server function
+// Mock Next.js cache functions since they're server functions
 jest.mock('next/cache', () => ({
-  revalidatePath: jest.fn(),
+  revalidateTag: jest.fn(),
+  unstable_cache: jest.fn((fn) => fn), // Pass through the function for testing
 }))
 
 // Import the mocked function for testing
-import { revalidatePath } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 
 describe('Todo Server Actions', () => {
   beforeEach(() => {
@@ -254,19 +255,19 @@ describe('Todo Server Actions', () => {
     })
   })
 
-  describe('revalidatePath integration', () => {
-    it('should call revalidatePath after mutations', async () => {
+  describe('revalidateTag integration', () => {
+    it('should call revalidateTag after mutations', async () => {
       await addTodo({ name: 'Test', category: 'Test', priority: 'Medium Priority' })
-      expect(revalidatePath).toHaveBeenCalledWith('/')
+      expect(revalidateTag).toHaveBeenCalledWith('todos')
       
       await deleteTodo('test-id')
-      expect(revalidatePath).toHaveBeenCalledWith('/')
+      expect(revalidateTag).toHaveBeenCalledWith('todos')
       
       await toggleTodoComplete('test-id')
-      expect(revalidatePath).toHaveBeenCalledWith('/')
+      expect(revalidateTag).toHaveBeenCalledWith('todos')
       
       await updateTodo('test-id', { name: 'Updated' })
-      expect(revalidatePath).toHaveBeenCalledWith('/')
+      expect(revalidateTag).toHaveBeenCalledWith('todos')
     })
   })
 })
