@@ -50,7 +50,9 @@ export function todoToBamlTodoItem(todo: Todo): TodoItem {
     completed: todo.completed,
     priority: todo.priority,
     category: todo.category,
-    createdAt: todo.createdAt.toISOString(),
+    createdAt: typeof todo.createdAt === 'string' 
+      ? todo.createdAt 
+      : todo.createdAt.toISOString(),
     dueDate: null // React Todo doesn't have dueDate yet
   }
 }
@@ -65,7 +67,9 @@ export function bamlTodoItemToTodo(todoItem: TodoItem): Todo {
     completed: todoItem.completed,
     priority: todoItem.priority,
     category: todoItem.category,
-    createdAt: new Date(todoItem.createdAt)
+    createdAt: todoItem.createdAt instanceof Date 
+      ? todoItem.createdAt 
+      : new Date(todoItem.createdAt)
   }
 }
 

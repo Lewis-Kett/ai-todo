@@ -1,4 +1,16 @@
 import '@testing-library/jest-dom'
+import { TextEncoder, TextDecoder } from 'util'
+
+// Add TextEncoder/TextDecoder for Next.js server components
+global.TextEncoder = TextEncoder
+global.TextDecoder = TextDecoder
+
+// Mock Next.js cache functions
+jest.mock('next/cache', () => ({
+  revalidateTag: jest.fn(),
+  revalidatePath: jest.fn(),
+  unstable_cache: jest.fn((fn) => fn),
+}))
 
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
