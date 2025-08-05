@@ -35,7 +35,6 @@ describe('Todo Server Actions', () => {
       expect(todos[0]).toHaveProperty('category')
       expect(todos[0]).toHaveProperty('priority')
       expect(todos[0]).toHaveProperty('completed')
-      expect(todos[0]).toHaveProperty('createdAt')
     })
 
     it('should return todos with correct structure', async () => {
@@ -47,7 +46,6 @@ describe('Todo Server Actions', () => {
         expect(typeof todo.category).toBe('string')
         expect(['High Priority', 'Medium Priority', 'Low Priority']).toContain(todo.priority)
         expect(typeof todo.completed).toBe('boolean')
-        expect(todo.createdAt).toBeInstanceOf(Date)
       })
     })
   })
@@ -242,7 +240,6 @@ describe('Todo Server Actions', () => {
       const todos = await getTodos()
       const todoToUpdate = todos[0]
       const originalCompleted = todoToUpdate.completed
-      const originalCreatedAt = todoToUpdate.createdAt
       
       await updateTodo(todoToUpdate.id, { name: 'Updated Name Only' })
       
@@ -250,7 +247,6 @@ describe('Todo Server Actions', () => {
       const updatedTodo = updatedTodos.find(todo => todo.id === todoToUpdate.id)
       
       expect(updatedTodo?.completed).toBe(originalCompleted)
-      expect(updatedTodo?.createdAt).toEqual(originalCreatedAt)
       expect(updatedTodo?.id).toBe(todoToUpdate.id)
     })
   })

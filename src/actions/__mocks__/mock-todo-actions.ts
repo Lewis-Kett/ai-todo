@@ -7,7 +7,6 @@ const mockTodos: Todo[] = [
     category: "Work",
     priority: "High Priority",
     completed: false,
-    createdAt: new Date(),
   },
   {
     id: "2",
@@ -15,7 +14,6 @@ const mockTodos: Todo[] = [
     category: "Development",
     priority: "Medium Priority",
     completed: false,
-    createdAt: new Date(),
   },
   {
     id: "3",
@@ -23,7 +21,6 @@ const mockTodos: Todo[] = [
     category: "Setup",
     priority: "High Priority",
     completed: true,
-    createdAt: new Date(),
   },
 ]
 
@@ -51,7 +48,7 @@ export async function toggleTodoComplete(id: string): Promise<void> {
 
 export async function updateTodo(
   id: string,
-  updates: Partial<Omit<Todo, "id" | "createdAt">>
+  updates: Partial<Omit<Todo, "id">>
 ): Promise<void> {
   // Mock implementation - parameters intentionally unused
   void id

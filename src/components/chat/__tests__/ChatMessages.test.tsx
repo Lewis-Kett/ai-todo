@@ -38,14 +38,12 @@ describe('ChatMessages', () => {
     {
       id: '1',
       role: 'user',
-      content: 'Hello',
-      timestamp: new Date('2024-01-01T12:00:00Z')
+      content: 'Hello'
     },
     {
       id: '2',
       role: 'assistant',
-      content: 'Hi there!',
-      timestamp: new Date('2024-01-01T12:01:00Z')
+      content: 'Hi there!'
     }
   ]
 

@@ -3,7 +3,6 @@ class Message {
   id string
   role "user" | "assistant" | "system"
   content string
-  timestamp string
 }
 
 class ChatResponse {
@@ -19,8 +18,6 @@ class TodoItem {
   completed bool
   priority "Low Priority" | "Medium Priority" | "High Priority"
   category string
-  createdAt string
-  dueDate string?
 }
 
 class TodoAction {
@@ -114,12 +111,9 @@ function CreateSmartTodo(
     {{ ctx.output_format() }}
 
     Rules:
-    1. Required: id, name, completed (false), priority ("Low Priority"/"Medium Priority"/"High Priority"), category, createdAt
+    1. Required: id, name, completed (false), priority ("Low Priority"/"Medium Priority"/"High Priority"), category
     2. Priority: "High Priority" for urgent/critical/explicit urgency, "Medium Priority" for important, "Low Priority" for non-urgent
     3. Category: Determine from context (work/personal/health/learning/shopping), default to "General" if unclear
-    4. DueDate: Only if explicit time mentioned ("Friday"/"tomorrow"/"end of day"), otherwise null
-    5. CreatedAt: Set to current timestamp in ISO format
-    6. Use JSON null for optional dueDate if not specified
   "#
 }
 

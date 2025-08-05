@@ -12,7 +12,6 @@ let todos: Todo[] = [
     category: 'Work',
     priority: 'High Priority',
     completed: false,
-    createdAt: new Date(),
   },
   {
     id: '2',
@@ -20,7 +19,6 @@ let todos: Todo[] = [
     category: 'Development',
     priority: 'Medium Priority',
     completed: false,
-    createdAt: new Date(),
   },
   {
     id: '3',
@@ -28,7 +26,6 @@ let todos: Todo[] = [
     category: 'Setup',
     priority: 'High Priority',
     completed: true,
-    createdAt: new Date(),
   },
 ]
 
@@ -59,7 +56,6 @@ export async function addTodo(formData: TodoFormData): Promise<void> {
     category: formData.category,
     priority: formData.priority,
     completed: false,
-    createdAt: new Date(),
   }
   
   todos.push(newTodo)
@@ -82,7 +78,7 @@ export async function toggleTodoComplete(id: string): Promise<void> {
 
 export async function updateTodo(
   id: string, 
-  updates: Partial<Omit<Todo, 'id' | 'createdAt'>>
+  updates: Partial<Omit<Todo, 'id'>>
 ): Promise<void> {
   todos = todos.map(todo =>
     todo.id === id 

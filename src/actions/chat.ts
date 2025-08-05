@@ -1,28 +1,26 @@
 'use server'
 
-import { type ChatMessage, type ApiResponse, type ChatResponse, type TodoActionIntent } from '@/types/chat'
-import { b } from '../../baml_client'
-import { chatMessagesToBamlMessages, todosToBamlTodoItems, bamlTodoItemToTodo } from '@/lib/baml-converters'
+import { type ApiResponse, type ChatResponse, type TodoActionIntent } from '@/types/chat'
+import { type Todo } from '@/types/todo'
+import { b, type Message } from '../../baml_client'
 import { getTodos } from './todo-actions'
 
 export async function sendChatMessage(
   message: string,
-  conversationHistory: ChatMessage[] = []
+  conversationHistory: Message[] = []
 ): Promise<ApiResponse<ChatResponse>> {
   try {
     // First, analyze if this is a todo-related request
     const currentTodos = await getTodos()
-    const bamlTodos = todosToBamlTodoItems(currentTodos)
+    // Todo and TodoItem have the same structure now
+    const bamlTodos = currentTodos
     
     const todoAnalysis = await b.AnalyzeTodoRequest(message, bamlTodos)
     
     // If the action is "analyze", it means the user just wants to chat
     if (todoAnalysis.action === 'analyze') {
-      // Convert React ChatMessages to BAML Messages format
-      const bamlConversationHistory = chatMessagesToBamlMessages(conversationHistory)
-      
       // Call BAML ChatWithAssistant function
-      const response = await b.ChatWithAssistant(message, bamlConversationHistory)
+      const response = await b.ChatWithAssistant(message, conversationHistory)
       
       return {
         success: true,
@@ -37,7 +35,8 @@ export async function sendChatMessage(
     // Otherwise, return the todo action intent
     const todoActionIntent: TodoActionIntent = {
       action: todoAnalysis.action,
-      todo: todoAnalysis.todo ? bamlTodoItemToTodo(todoAnalysis.todo) : undefined,
+      // TodoItem and Todo have the same structure now
+      todo: todoAnalysis.todo as Todo | undefined,
       reasoning: todoAnalysis.reasoning
     }
     

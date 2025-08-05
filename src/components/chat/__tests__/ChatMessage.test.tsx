@@ -6,15 +6,13 @@ describe('ChatMessage', () => {
   const mockUserMessage: ChatMessageType = {
     id: '1',
     role: 'user',
-    content: 'Hello, how are you?',
-    timestamp: new Date('2024-01-01T12:00:00Z')
+    content: 'Hello, how are you?'
   }
 
   const mockAssistantMessage: ChatMessageType = {
     id: '2',
     role: 'assistant',
-    content: 'I am doing well, thank you!',
-    timestamp: new Date('2024-01-01T12:01:00Z')
+    content: 'I am doing well, thank you!'
   }
 
   it('renders user message with correct styling', () => {
@@ -37,13 +35,6 @@ describe('ChatMessage', () => {
     expect(messageContent).toHaveClass('bg-muted', 'text-muted-foreground')
   })
 
-  it('displays timestamp correctly', () => {
-    render(<ChatMessage message={mockUserMessage} />)
-    
-    // The timestamp should be formatted as time - check for the actual formatted string
-    const expectedTimestamp = new Date('2024-01-01T12:00:00Z').toLocaleTimeString()
-    expect(screen.getByText(expectedTimestamp)).toBeInTheDocument()
-  })
 
   it('shows streaming indicator when isStreaming is true', () => {
     render(<ChatMessage message={mockAssistantMessage} isStreaming={true} />)

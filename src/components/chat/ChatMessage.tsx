@@ -45,14 +45,11 @@ export const ChatMessage = memo(function ChatMessage({ message, isStreaming = fa
           )}
         </div>
         
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
-          {message.role === 'assistant' && (
-            <Badge variant="secondary" className="text-xs">
-              AI
-            </Badge>
-          )}
-        </div>
+        {message.role === 'assistant' && (
+          <Badge variant="secondary" className="text-xs">
+            AI
+          </Badge>
+        )}
       </div>
     </div>
   )

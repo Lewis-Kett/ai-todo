@@ -157,11 +157,6 @@ describe('ChatInterface', () => {
       streamingMessageId: undefined,
       messageCount: 0,
       handleSendMessage: jest.fn(),
-      error: null,
-      hasMessages: false,
-      lastMessage: null,
-      sendMessage: jest.fn(),
-      clearMessages: jest.fn(),
     })
     
     render(
@@ -181,11 +176,6 @@ describe('ChatInterface', () => {
       streamingMessageId: 'test-streaming-id',
       messageCount: 0,
       handleSendMessage: jest.fn(),
-      error: null,
-      hasMessages: false,
-      lastMessage: null,
-      sendMessage: jest.fn(),
-      clearMessages: jest.fn(),
     })
     
     render(

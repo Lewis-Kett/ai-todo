@@ -4,7 +4,6 @@ export interface Todo {
   category: string;
   priority: 'High Priority' | 'Medium Priority' | 'Low Priority';
   completed: boolean;
-  createdAt: Date;
 }
 
 export type TodoPriority = Todo['priority'];

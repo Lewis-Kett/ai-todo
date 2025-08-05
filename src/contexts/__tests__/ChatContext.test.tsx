@@ -77,14 +77,12 @@ describe('ChatContext', () => {
       expect(result.current.messages[0]).toEqual({
         id: 'id-1',
         role: 'user',
-        content: 'Hello AI',
-        timestamp: expect.any(Date)
+        content: 'Hello AI'
       })
       expect(result.current.messages[1]).toEqual({
         id: 'id-2',
         role: 'assistant',
-        content: 'AI response',
-        timestamp: expect.any(Date)
+        content: 'AI response'
       })
       expect(result.current.isLoading).toBe(false)
     })

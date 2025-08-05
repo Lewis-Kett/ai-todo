@@ -5,8 +5,7 @@ export function createUserMessage(content: string): ChatMessage {
   return {
     id: generateId(),
     role: 'user',
-    content,
-    timestamp: new Date()
+    content
   }
 }
 
@@ -14,8 +13,7 @@ export function createAssistantMessage(content: string = ''): ChatMessage {
   return {
     id: generateId(),
     role: 'assistant',
-    content,
-    timestamp: new Date()
+    content
   }
 }
 
@@ -23,8 +21,7 @@ export function createAssistantMessageWithId(id: string, content: string = ''): 
   return {
     id,
     role: 'assistant',
-    content,
-    timestamp: new Date()
+    content
   }
 }
 

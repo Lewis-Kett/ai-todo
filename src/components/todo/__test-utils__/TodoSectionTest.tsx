@@ -11,7 +11,6 @@ const mockTodos: Todo[] = [
     category: 'Work',
     priority: 'High Priority',
     completed: false,
-    createdAt: new Date(),
   },
   {
     id: '2',
@@ -19,7 +18,6 @@ const mockTodos: Todo[] = [
     category: 'Development',
     priority: 'Medium Priority',
     completed: false,
-    createdAt: new Date(),
   },
   {
     id: '3',
@@ -27,7 +25,6 @@ const mockTodos: Todo[] = [
     category: 'Setup',
     priority: 'High Priority',
     completed: true,
-    createdAt: new Date(),
   },
 ]
 

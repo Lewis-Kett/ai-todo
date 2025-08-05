@@ -39,7 +39,6 @@ describe('TodoItemClient', () => {
     category: 'Testing',
     priority: 'High Priority',
     completed: false,
-    createdAt: new Date('2023-01-01'),
   }
 
   const mockInlineEditReturnValue = {
