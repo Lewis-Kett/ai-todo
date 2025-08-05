@@ -82,11 +82,8 @@ export function ChatProvider({ children }: ChatProviderProps) {
     dispatch({ type: 'ADD_MESSAGE', payload: assistantMessage })
 
     try {
-      // Get current messages including the new user message for context
-      const currentMessages = [...state.messages, userMessage]
-      
-      // Call server action
-      const result = await sendChatMessage(content, currentMessages)
+      // Call server action with existing conversation history (not including current message)
+      const result = await sendChatMessage(content, state.messages)
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to send message')
