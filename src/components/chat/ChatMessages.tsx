@@ -28,7 +28,7 @@ export function ChatMessages({
 
   if (messages.length === 0 && !isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="h-full w-full flex items-center justify-center p-8">
         <div className="text-center text-muted-foreground">
           <p className="text-lg font-medium">Start a conversation</p>
           <p className="text-sm">Ask me anything about your todos or productivity!</p>
@@ -38,8 +38,8 @@ export function ChatMessages({
   }
 
   return (
-    <ScrollArea className="flex-1" ref={scrollAreaRef}>
-      <div className="space-y-2">
+    <ScrollArea className="h-full w-full" ref={scrollAreaRef}>
+      <div className="space-y-2 p-4">
         {messages.map((message) => (
           <ChatMessage
             key={message.id}

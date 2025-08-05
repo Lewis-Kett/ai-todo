@@ -27,12 +27,14 @@ export function ChatInterface({ className }: ChatInterfaceProps) {
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 flex flex-col p-0">
-        <ChatMessages 
-          messages={messages}
-          streamingMessageId={streamingMessageId}
-          isLoading={isLoading}
-        />
+      <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+        <div className="flex-1 min-h-0">
+          <ChatMessages 
+            messages={messages}
+            streamingMessageId={streamingMessageId}
+            isLoading={isLoading}
+          />
+        </div>
         
         <ChatInput 
           onSendMessage={handleSendMessage}
