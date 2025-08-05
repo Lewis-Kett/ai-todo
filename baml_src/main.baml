@@ -23,6 +23,27 @@ class AddTodoTool {
   responseToUser string @description("Your response to the users request") 
 }
 
+class DeleteTodoTool {
+  action "delete_todo"
+  id string @description("The ID of the todo item to delete")
+  responseToUser string @description("Your response to the users request")
+}
+
+class ToggleTodoTool {
+  action "toggle_todo"
+  id string @description("The ID of the todo item to toggle completion status")
+  responseToUser string @description("Your response to the users request")
+}
+
+class UpdateTodoTool {
+  action "update_todo"
+  id string @description("The ID of the todo item to update")
+  name string? @description("New name for the todo item (optional)")
+  category string? @description("New category for the todo item (optional)")
+  priority ("High Priority" | "Medium Priority" | "Low Priority")? @description("New priority for the todo item (optional)")
+  responseToUser string @description("Your response to the users request")
+}
+
 class ChatTool {
   action "chat"
   responseToUser string @description("Your response to the users request") 
@@ -44,7 +65,7 @@ function HandleTodoRequest(
   user_message: string,
   current_todos: TodoItem[],
   conversation_history: Message[]?
-) -> AddTodoTool | ChatTool {
+) -> AddTodoTool | DeleteTodoTool | ToggleTodoTool | UpdateTodoTool | ChatTool {
   client GPT4
   prompt #"
     You are a helpful AI assistant for a todo application. 
@@ -60,11 +81,14 @@ function HandleTodoRequest(
     Analyze the user's message and determine what they want to do.
     
     If they want to ADD/CREATE a new todo item, use AddTodoTool.
+    If they want to DELETE/REMOVE a todo item, use DeleteTodoTool (specify the ID).
+    If they want to TOGGLE/COMPLETE/MARK a todo item, use ToggleTodoTool (specify the ID).
+    If they want to UPDATE/EDIT/MODIFY a todo item, use UpdateTodoTool (specify the ID and fields to update).
     If they just want to chat/analyze/get advice, use ChatTool.
 
     Current todos:
     {% for todo in current_todos %}
-    - {{ todo.name }} ({{ todo.category }}, {{ todo.priority }}, completed: {{ todo.completed }})
+    - ID: {{ todo.id }} | {{ todo.name }} ({{ todo.category }}, {{ todo.priority }}, completed: {{ todo.completed }})
     {% endfor %}
 
     User message: {{ user_message }}
@@ -73,6 +97,9 @@ function HandleTodoRequest(
 
     Guidelines:
     - For AddTodoTool: Extract name, determine appropriate category and priority
+    - For DeleteTodoTool: Use the exact ID from the todo list above
+    - For ToggleTodoTool: Use the exact ID from the todo list above  
+    - For UpdateTodoTool: Use the exact ID from the todo list above and specify which fields to update
     - For ChatTool: Provide a helpful response regarding the users query
     - Priority levels: "High Priority" for urgent/critical, "Medium Priority" for important, "Low Priority" for non-urgent
     - Common categories: Work, Personal, Health, Learning, Shopping, General

@@ -1,4 +1,4 @@
-import type { AddTodoTool, ChatTool } from '../../baml_client/types'
+import type { AddTodoTool, ChatTool, DeleteTodoTool, ToggleTodoTool, UpdateTodoTool } from '../../baml_client/types'
 
 export interface ChatMessage {
   id: string
@@ -7,7 +7,7 @@ export interface ChatMessage {
 }
 
 // New tool-based action types
-export type TodoTool = AddTodoTool | ChatTool
+export type TodoTool = AddTodoTool | DeleteTodoTool | ToggleTodoTool | UpdateTodoTool | ChatTool
 
 export interface ChatResponse {
   message: string
