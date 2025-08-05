@@ -1,7 +1,6 @@
 'use client'
 
 import { createContext, useContext, useReducer, useCallback } from 'react'
-import { type ChatMessage } from '@/types/chat'
 import { sendChatMessage } from '@/actions/chat'
 import { generateId } from '@/lib/utils'
 import { 
@@ -75,32 +74,6 @@ const ChatDispatchContext = createContext<ChatDispatchContextType | null>(null)
 export function ChatProvider({ children }: ChatProviderProps) {
   const [state, dispatch] = useReducer(chatReducer, initialState)
 
-
-  // Unified sendMessage function - handles direct API calls (backward compatible)
-  const sendMessage = useCallback(async (
-    content: string,
-    conversationHistory: ChatMessage[] = []
-  ): Promise<unknown> => {
-    dispatch({ type: 'START_CHAT' })
-
-    try {
-      // Call server action with provided conversation history
-      const result = await sendChatMessage(content, conversationHistory)
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to send message')
-      }
-
-      dispatch({ type: 'COMPLETE_CHAT' })
-      return result.data
-      
-    } catch (err) {
-      const errorMessage = createErrorMessage(err)
-      dispatch({ type: 'CHAT_ERROR', payload: errorMessage })
-      throw err
-    }
-  }, [])
-
   // handleSendMessage for chat UI with message management
   const handleSendMessage = useCallback(async (content: string) => {
     // Start chat session
@@ -169,7 +142,6 @@ export function ChatProvider({ children }: ChatProviderProps) {
   }
 
   const dispatchValue: ChatDispatchContextType = {
-    sendMessage,
     handleSendMessage,
     clearMessages
   }

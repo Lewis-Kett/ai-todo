@@ -30,7 +30,6 @@ export interface ChatContextType {
 }
 
 export interface ChatDispatchContextType {
-  sendMessage: (content: string, conversationHistory?: ChatMessage[]) => Promise<unknown>
   handleSendMessage: (content: string) => Promise<void>
   clearMessages: () => void
 }
