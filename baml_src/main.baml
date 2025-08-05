@@ -5,12 +5,6 @@ class Message {
   content string
 }
 
-class ChatResponse {
-  message string @stream.not_null
-  confidence float?
-  suggestions string[]?
-}
-
 // Todo-related types
 class TodoItem {
   id string
@@ -26,12 +20,12 @@ class AddTodoTool {
   name string @description("The todo item name")
   category string @description("Category like Work, Personal, etc.")
   priority "High Priority" | "Medium Priority" | "Low Priority"
-  reasoning string @description("Why this action was chosen")
+  responseToUser string @description("Your response to the users request") 
 }
 
-class AnalyzeTool {
-  action "analyze"
-  reasoning string @description("Why this is just a chat message")
+class ChatTool {
+  action "chat"
+  responseToUser string @description("Your response to the users request") 
 }
 
 // Configure LLM Client
@@ -45,41 +39,28 @@ client<llm> GPT4 {
   }
 }
 
-// Basic Chat Function
-function ChatWithAssistant(
-  message: string,
+// Enhanced Todo Request Handler
+function HandleTodoRequest(
+  user_message: string,
+  current_todos: TodoItem[],
   conversation_history: Message[]?
-) -> ChatResponse {
+) -> AddTodoTool | ChatTool {
   client GPT4
   prompt #"
     You are a helpful AI assistant for a todo application. 
     Help users manage their tasks, provide productivity advice, and answer questions.
-
+    
     {% if conversation_history %}
     Previous conversation:
     {% for msg in conversation_history %}
     {{ msg.role }}: {{ msg.content }}
     {% endfor %}
     {% endif %}
-
-    {{ ctx.output_format() }}
-
-    {{ _.role("user") }}
-    {{ message }}
-  "#
-}
-
-// Enhanced Todo Request Handler
-function HandleTodoRequest(
-  user_message: string,
-  current_todos: TodoItem[]
-) -> AddTodoTool | AnalyzeTool {
-  client GPT4
-  prompt #"
+    
     Analyze the user's message and determine what they want to do.
     
     If they want to ADD/CREATE a new todo item, use AddTodoTool.
-    If they just want to chat/analyze/get advice, use AnalyzeTool.
+    If they just want to chat/analyze/get advice, use ChatTool.
 
     Current todos:
     {% for todo in current_todos %}
@@ -92,7 +73,7 @@ function HandleTodoRequest(
 
     Guidelines:
     - For AddTodoTool: Extract name, determine appropriate category and priority
-    - For AnalyzeTool: Provide helpful reasoning about why this is a chat message
+    - For ChatTool: Provide a helpful response regarding the users query
     - Priority levels: "High Priority" for urgent/critical, "Medium Priority" for important, "Low Priority" for non-urgent
     - Common categories: Work, Personal, Health, Learning, Shopping, General
   "#
