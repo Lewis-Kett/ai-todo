@@ -17,7 +17,7 @@
     "test:baml": "baml-cli test"
   },
   "dependencies": {
-    "@boundaryml/baml": "^0.202.1",
+    "@boundaryml/baml": "^0.203.1",
     "@boundaryml/baml-nextjs-plugin": "^0.1.0",
     "@hookform/resolvers": "^5.2.1",
     "@radix-ui/react-avatar": "^1.1.10",

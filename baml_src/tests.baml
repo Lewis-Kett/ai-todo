@@ -76,428 +76,83 @@ test TestChatResponseFields {
   @@assert({{ _.checks.has_message }})
 }
 
-// Test todo creation analysis
-test TestAnalyzeCreateTodo {
-  functions [AnalyzeTodoRequest]
-  args {
-    user_message "I need to add a task to call my dentist tomorrow"
-    current_todos [
-      {
-        id "existing-1"
-        text "Finish project report"
-        completed false
-        priority "high"
-        category "work"
-        dueDate "2024-01-05"
-      }
-    ]
-  }
-  @@assert({{ this.action == "create" }})
-  @@assert({{ this.reasoning|length > 0 }})
-}
+// ===== NEW HandleTodoRequest TESTS =====
 
-// Test todo completion analysis
-test TestAnalyzeCompleteTodo {
-  functions [AnalyzeTodoRequest]
+// Test new HandleTodoRequest function with add todo request
+test TestHandleAddTodoRequest {
+  functions [HandleTodoRequest]
   args {
-    user_message "I finished the project report"
-    current_todos [
-      {
-        id "existing-1"
-        text "Finish project report"
-        completed false
-        priority "high"
-        category "work"
-        dueDate "2024-01-05"
-      },
-      {
-        id "existing-2"
-        text "Buy groceries"
-        completed false
-        priority "medium"
-        category "personal"
-        dueDate null
-      }
-    ]
-  }
-  @@assert({{ this.action == "complete" }})
-}
-
-// Test smart todo creation with high priority
-test TestCreateHighPriorityTodo {
-  functions [CreateSmartTodo]
-  args {
-    user_input "URGENT: Submit tax documents by end of day"
-    existing_todos []
-  }
-  @@check( priority_correct, {{ this.priority == "high" }} )
-  @@check( text_exists, {{ this.text|length > 0 }} )
-  @@check( id_exists, {{ this.id|length > 0 }} )
-  @@check( completed_default, {{ this.completed == false }} )
-  @@assert({{ _.checks.priority_correct and _.checks.text_exists and _.checks.id_exists }})
-  @@assert({{ _.latency_ms < 3000 }})
-}
-
-// Test smart todo creation with context
-test TestCreateTodoWithContext {
-  functions [CreateSmartTodo]
-  args {
-    user_input "Schedule meeting with John about the marketing campaign"
-    existing_todos [
-      {
-        id "1"
-        text "Review marketing budget"
-        completed false
-        priority "medium"
-        category "marketing"
-        dueDate null
-      },
-      {
-        id "2"
-        text "Prepare campaign slides"
-        completed true
-        priority "medium"
-        category "marketing"
-        dueDate null
-      }
-    ]
-  }
-  @@check( category_valid, {{ this.category == "marketing" or this.category == "work" }} )
-  @@check( text_exists, {{ this.text|length > 0 }} )
-  @@check( priority_set, {{ this.priority in ["low", "medium", "high"] }} )
-  @@assert({{ _.checks.category_valid and _.checks.text_exists and _.checks.priority_set }})
-  @@assert({{ _.latency_ms < 3000 }})
-}
-
-// Test productivity insights with mixed todos
-test TestProductivityInsights {
-  functions [GenerateProductivityInsights]
-  args {
-    todos [
-      {
-        id "1"
-        text "Complete quarterly review"
-        completed true
-        priority "high"
-        category "work"
-        dueDate "2024-01-15"
-      },
-      {
-        id "2"
-        text "Exercise for 30 minutes"
-        completed true
-        priority "medium"
-        category "health"
-        dueDate null
-      },
-      {
-        id "3"
-        text "Read programming book"
-        completed false
-        priority "low"
-        category "learning"
-        dueDate null
-      },
-      {
-        id "4"
-        text "Fix critical bug"
-        completed true
-        priority "high"
-        category "work"
-        dueDate "2024-01-10"
-      },
-      {
-        id "5"
-        text "Plan vacation"
-        completed false
-        priority "low"
-        category "personal"
-        dueDate null
-      }
-    ]
-    timeframe "week"
-  }
-  @@check( min_length, {{ this|length > 50 }} )
-  @@check( max_length, {{ this|length < 2000 }} )
-  @@assert({{ _.checks.min_length and _.checks.max_length }})
-  @@assert({{ _.latency_ms < 4000 }})
-}
-
-// Test empty todo list insights
-test TestEmptyTodoInsights {
-  functions [GenerateProductivityInsights]
-  args {
-    todos []
-    timeframe "month"
-  }
-  @@assert({{ this|length > 0 }})
-}
-
-// Test todo update analysis
-test TestAnalyzeUpdateTodo {
-  functions [AnalyzeTodoRequest]
-  args {
-    user_message "Change the priority of the project report to low"
-    current_todos [
-      {
-        id "existing-1"
-        text "Finish project report"
-        completed false
-        priority "high"
-        category "work"
-        dueDate "2024-01-05"
-      }
-    ]
-  }
-  @@assert({{ this.action == "update" }})
-  @@assert({{ this.reasoning|length > 0 }})
-}
-
-// Test todo deletion analysis
-test TestAnalyzeDeleteTodo {
-  functions [AnalyzeTodoRequest]
-  args {
-    user_message "Remove the groceries task from my list"
-    current_todos [
-      {
-        id "existing-1"
-        text "Buy groceries"
-        completed false
-        priority "medium"
-        category "personal"
-        dueDate null
-      },
-      {
-        id "existing-2"
-        text "Finish project report"
-        completed false
-        priority "high"
-        category "work"
-        dueDate "2024-01-05"
-      }
-    ]
-  }
-  @@assert({{ this.action == "delete" }})
-  @@assert({{ this.reasoning|length > 0 }})
-}
-
-// Test todo analysis request
-test TestAnalyzeAnalyzeTodo {
-  functions [AnalyzeTodoRequest]
-  args {
-    user_message "What should I focus on today based on my current tasks?"
+    user_message "I need to add a task to buy groceries for dinner tonight"
     current_todos [
       {
         id "1"
-        text "Submit quarterly report"
+        name "Complete project report"
         completed false
-        priority "high"
-        category "work"
-        dueDate "2024-01-15"
-      },
-      {
-        id "2"
-        text "Exercise"
-        completed false
-        priority "low"
-        category "health"
-        dueDate null
+        priority "High Priority"
+        category "Work"
       }
     ]
   }
-  @@assert({{ this.action == "analyze" }})
-  @@assert({{ this.reasoning|length > 0 }})
-}
-
-// Test error handling - empty message
-test TestAnalyzeEmptyMessage {
-  functions [AnalyzeTodoRequest]
-  args {
-    user_message ""
-    current_todos [
-      {
-        id "1"
-        text "Sample task"
-        completed false
-        priority "medium"
-        category "work"
-        dueDate null
-      }
-    ]
-  }
-  @@check( has_action, {{ this.action|length > 0 }} )
+  @@check( is_add_todo, {{ this.action == "add_todo" }} )
+  @@check( has_name, {{ this.name|length > 0 }} )
+  @@check( has_category, {{ this.category|length > 0 }} )
+  @@check( valid_priority, {{ this.priority in ["High Priority", "Medium Priority", "Low Priority"] }} )
   @@check( has_reasoning, {{ this.reasoning|length > 0 }} )
-  @@assert({{ _.checks.has_reasoning }})
-}
-
-// Test error handling - no current todos
-test TestAnalyzeNoTodos {
-  functions [AnalyzeTodoRequest]
-  args {
-    user_message "Mark my project as complete"
-    current_todos []
-  }
-  @@assert({{ this.reasoning|length > 0 }})
-}
-
-// Test boundary conditions - very long text
-test TestCreateTodoLongText {
-  functions [CreateSmartTodo]
-  args {
-    user_input "This is an extremely long todo item description that contains multiple sentences and detailed information about what needs to be accomplished, including specific requirements, deadlines, and various other details that might be relevant to completing this task successfully"
-    existing_todos []
-  }
-  @@check( text_length, {{ this.text|length > 0 and this.text|length < 500 }} )
-  @@check( has_id, {{ this.id|length > 0 }} )
-  @@assert({{ _.checks.text_length and _.checks.has_id }})
-}
-
-// Test edge case - special characters in input
-test TestCreateTodoSpecialChars {
-  functions [CreateSmartTodo]
-  args {
-    user_input "Review Q4 report & prepare summary (due: 12/31) - HIGH PRIORITY!"
-    existing_todos []
-  }
-  @@assert({{ this.text|length > 0 }})
-  @@assert({{ this.id|length > 0 }})
-}
-
-// Test different timeframe variations
-test TestInsightsDaily {
-  functions [GenerateProductivityInsights]
-  args {
-    todos [
-      {
-        id "1"
-        text "Morning standup"
-        completed true
-        priority "medium"
-        category "work"
-        dueDate "2024-01-15"
-      }
-    ]
-    timeframe "day"
-  }
-  @@assert({{ this|length > 0 }})
-}
-
-test TestInsightsQuarterly {
-  functions [GenerateProductivityInsights]
-  args {
-    todos [
-      {
-        id "1"
-        text "Quarterly planning"
-        completed false
-        priority "high"
-        category "work"
-        dueDate "2024-03-31"
-      },
-      {
-        id "2"
-        text "Team review"
-        completed true
-        priority "medium"
-        category "work"
-        dueDate "2024-03-15"
-      }
-    ]
-    timeframe "quarter"
-  }
-  @@check( insights_length, {{ this|length > 0 }} )
-  @@assert({{ _.checks.insights_length }})
+  @@assert({{ _.checks.is_add_todo and _.checks.has_name and _.checks.has_category and _.checks.valid_priority and _.checks.has_reasoning }})
   @@assert({{ _.latency_ms < 5000 }})
 }
 
-test TestInsightsYearly {
-  functions [GenerateProductivityInsights]
+// Test HandleTodoRequest with urgent task
+test TestHandleUrgentTodoRequest {
+  functions [HandleTodoRequest]
   args {
-    todos [
-      {
-        id "1"
-        text "Annual goals review"
-        completed true
-        priority "high"
-        category "personal"
-        dueDate "2024-12-31"
-      }
-    ]
-    timeframe "year"
+    user_message "URGENT: Add submit tax documents by end of week"
+    current_todos []
   }
-  @@assert({{ this|length > 0 }})
+  @@check( is_add_todo, {{ this.action == "add_todo" }} )
+  @@check( high_priority, {{ this.priority == "High Priority" }} )
+  @@check( has_name, {{ this.name|length > 0 }} )
+  @@assert({{ _.checks.is_add_todo and _.checks.high_priority and _.checks.has_name }})
 }
 
-// Test optional field combinations
-test TestTodoAllFieldsPresent {
-  functions [CreateSmartTodo]
+// Test HandleTodoRequest with chat message (should return AnalyzeTool)
+test TestHandleChatMessage {
+  functions [HandleTodoRequest]
   args {
-    user_input "Complete client presentation by Friday - very important"
-    existing_todos []
-  }
-  @@check( all_required_fields, {{ this.id|length > 0 and this.text|length > 0 and this.priority in ["low", "medium", "high"] and this.completed == false }} )
-  @@check( optional_fields_valid, {{ (this.category|length > 0 if this.category is defined else true) and (this.dueDate|length > 0 if this.dueDate is defined else true) }} )
-  @@assert({{ _.checks.all_required_fields and _.checks.optional_fields_valid }})
-}
-
-// Test boundary condition - null category
-test TestTodoNullCategory {
-  functions [CreateSmartTodo]
-  args {
-    user_input "Generic task without specific category"
-    existing_todos []
-  }
-  @@check( all_required_fields, {{ this.id|length > 0 and this.text|length > 0 and this.priority in ["low", "medium", "high"] and this.completed == false }} )
-  @@check( category_is_null, {{ this.category == None }} )
-  @@assert({{ _.checks.all_required_fields and _.checks.category_is_null }})
-}
-
-// Test boundary condition - null due date
-test TestTodoNullDueDate {
-  functions [CreateSmartTodo]
-  args {
-    user_input "Task without specific deadline"
-    existing_todos []
-  }
-  @@check( all_required_fields, {{ this.id|length > 0 and this.text|length > 0 and this.priority in ["low", "medium", "high"] and this.completed == false }} )
-  @@check( due_date_is_null, {{ this.dueDate == None }} )
-  @@assert({{ _.checks.all_required_fields and _.checks.due_date_is_null }})
-}
-
-// Test mixed priority todos with context
-test TestMixedPriorityContext {
-  functions [AnalyzeTodoRequest]
-  args {
-    user_message "What's most important right now?"
+    user_message "What should I focus on today? Can you give me some productivity tips?"
     current_todos [
       {
         id "1"
-        text "Critical bug fix"
+        name "Review code"
         completed false
-        priority "high"
-        category "work"
-        dueDate "2024-01-16"
-      },
-      {
-        id "2"
-        text "Team lunch planning"
-        completed false
-        priority "low"
-        category "social"
-        dueDate null
-      },
-      {
-        id "3"
-        text "Code review"
-        completed false
-        priority "medium"
-        category "work"
-        dueDate "2024-01-17"
+        priority "Medium Priority"
+        category "Work"
       }
     ]
   }
-  @@check( action_valid, {{ this.action in ["create", "update", "delete", "complete", "analyze"] }} )
-  @@check( reasoning_detailed, {{ this.reasoning|length > 20 }} )
-  @@assert({{ _.checks.action_valid and _.checks.reasoning_detailed }})
-  @@assert({{ _.latency_ms < 4000 }})
+  @@check( is_analyze, {{ this.action == "analyze" }} )
+  @@check( has_reasoning, {{ this.reasoning|length > 0 }} )
+  @@assert({{ _.checks.is_analyze and _.checks.has_reasoning }})
+  @@assert({{ _.latency_ms < 5000 }})
+}
+
+// Test HandleTodoRequest with work-related task
+test TestHandleWorkTodoRequest {
+  functions [HandleTodoRequest]
+  args {
+    user_message "Add review pull request #123 to my work tasks"
+    current_todos [
+      {
+        id "1"
+        name "Finish feature development"
+        completed false
+        priority "High Priority"
+        category "Work"
+      }
+    ]
+  }
+  @@check( is_add_todo, {{ this.action == "add_todo" }} )
+  @@check( work_category, {{ this.category == "Work" }} )
+  @@check( has_name, {{ this.name|length > 0 }} )
+  @@assert({{ _.checks.is_add_todo and _.checks.work_category }})
 }

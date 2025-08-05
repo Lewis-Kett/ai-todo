@@ -1,4 +1,4 @@
-import type { Todo } from './todo'
+import type { AddTodoTool, AnalyzeTool } from '../../baml_client/types'
 
 export interface ChatMessage {
   id: string
@@ -6,17 +6,14 @@ export interface ChatMessage {
   content: string
 }
 
-export interface TodoActionIntent {
-  action: 'create' | 'update' | 'delete' | 'complete' | 'analyze'
-  todo?: Todo
-  reasoning: string
-}
+// New tool-based action types
+export type TodoTool = AddTodoTool | AnalyzeTool
 
 export interface ChatResponse {
   message: string
   confidence?: number
   suggestions?: string[]
-  todoAction?: TodoActionIntent
+  todoTool?: TodoTool
 }
 
 export interface ApiResponse<T> {

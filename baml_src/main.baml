@@ -20,10 +20,18 @@ class TodoItem {
   category string
 }
 
-class TodoAction {
-  action "create" | "update" | "delete" | "complete" | "analyze"
-  todo TodoItem?
-  reasoning string
+// Tool classes for CRUD operations
+class AddTodoTool {
+  action "add_todo"
+  name string @description("The todo item name")
+  category string @description("Category like Work, Personal, etc.")
+  priority "High Priority" | "Medium Priority" | "Low Priority"
+  reasoning string @description("Why this action was chosen")
+}
+
+class AnalyzeTool {
+  action "analyze"
+  reasoning string @description("Why this is just a chat message")
 }
 
 // Configure LLM Client
@@ -34,17 +42,6 @@ client<llm> GPT4 {
     api_key env.OPENAI_API_KEY
     max_tokens 1000
     temperature 0.7
-  }
-}
-
-// Faster client for insights
-client<llm> GPT4Fast {
-  provider "openai"
-  options {
-    model "gpt-4o"
-    api_key env.OPENAI_API_KEY
-    max_tokens 200
-    temperature 0.3
   }
 }
 
@@ -72,64 +69,32 @@ function ChatWithAssistant(
   "#
 }
 
-// Todo Analysis Function
-function AnalyzeTodoRequest(
+// Enhanced Todo Request Handler
+function HandleTodoRequest(
   user_message: string,
   current_todos: TodoItem[]
-) -> TodoAction {
+) -> AddTodoTool | AnalyzeTool {
   client GPT4
   prompt #"
-    Analyze the user's message and determine what todo action they want to perform.
-    Consider the context of their current todos.
+    Analyze the user's message and determine what they want to do.
+    
+    If they want to ADD/CREATE a new todo item, use AddTodoTool.
+    If they just want to chat/analyze/get advice, use AnalyzeTool.
 
     Current todos:
     {% for todo in current_todos %}
-    - {{ todo.name }} ({{ todo.priority }}, completed: {{ todo.completed }})
+    - {{ todo.name }} ({{ todo.category }}, {{ todo.priority }}, completed: {{ todo.completed }})
     {% endfor %}
 
     User message: {{ user_message }}
 
     {{ ctx.output_format() }}
 
-    Determine the appropriate action and provide reasoning.
-  "#
-}
-
-// Smart Todo Creation Function
-function CreateSmartTodo(
-  user_input: string,
-  existing_todos: TodoItem[]?
-) -> TodoItem {
-  client GPT4
-  prompt #"
-    Create a todo item from: {{ user_input }}
-    
-    {% if existing_todos %}
-    Context: {% for todo in existing_todos %}{{ todo.name }} ({{ todo.category }}, {{ todo.priority }}){% if not loop.last %}, {% endif %}{% endfor %}
-    {% endif %}
-
-    {{ ctx.output_format() }}
-
-    Rules:
-    1. Required: id, name, completed (false), priority ("Low Priority"/"Medium Priority"/"High Priority"), category
-    2. Priority: "High Priority" for urgent/critical/explicit urgency, "Medium Priority" for important, "Low Priority" for non-urgent
-    3. Category: Determine from context (work/personal/health/learning/shopping), default to "General" if unclear
-  "#
-}
-
-// Productivity Insights Function
-function GenerateProductivityInsights(
-  todos: TodoItem[],
-  timeframe: string
-) -> string {
-  client GPT4Fast
-  prompt #"
-    {{ timeframe }} summary:
-    {% for todo in todos %}
-    {{ "✓" if todo.completed else "○" }} {{ todo.name }} ({{ todo.priority }})
-    {% endfor %}
-
-    Provide: completion rate, priority focus, one tip.
+    Guidelines:
+    - For AddTodoTool: Extract name, determine appropriate category and priority
+    - For AnalyzeTool: Provide helpful reasoning about why this is a chat message
+    - Priority levels: "High Priority" for urgent/critical, "Medium Priority" for important, "Low Priority" for non-urgent
+    - Common categories: Work, Personal, Health, Learning, Shopping, General
   "#
 }
 

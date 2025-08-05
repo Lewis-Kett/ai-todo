@@ -1,25 +1,27 @@
 'use server'
 
-import { type ApiResponse, type ChatResponse, type TodoActionIntent } from '@/types/chat'
-import { type Todo } from '@/types/todo'
+import { type ApiResponse, type ChatResponse } from '@/types/chat'
+// TodoTool is used in the function body for type checking
+import { type TodoFormData } from '@/types/todo'
 import { b, type Message } from '../../baml_client'
-import { getTodos } from './todo-actions'
+import { getTodos, addTodo } from './todo-actions'
 
 export async function sendChatMessage(
   message: string,
   conversationHistory: Message[] = []
 ): Promise<ApiResponse<ChatResponse>> {
   try {
-    // First, analyze if this is a todo-related request
+    // Get current todos for context
     const currentTodos = await getTodos()
     // Todo and TodoItem have the same structure now
     const bamlTodos = currentTodos
     
-    const todoAnalysis = await b.AnalyzeTodoRequest(message, bamlTodos)
+    // Use new HandleTodoRequest function to determine action
+    const todoTool = await b.HandleTodoRequest(message, bamlTodos)
     
-    // If the action is "analyze", it means the user just wants to chat
-    if (todoAnalysis.action === 'analyze') {
-      // Call BAML ChatWithAssistant function
+    // Handle different tool types
+    if (todoTool.action === 'analyze') {
+      // User just wants to chat - use ChatWithAssistant
       const response = await b.ChatWithAssistant(message, conversationHistory)
       
       return {
@@ -27,24 +29,36 @@ export async function sendChatMessage(
         data: {
           message: response.message,
           confidence: response.confidence ?? undefined,
-          suggestions: response.suggestions ?? undefined
+          suggestions: response.suggestions ?? undefined,
+          todoTool
+        }
+      }
+    } else if (todoTool.action === 'add_todo') {
+      // User wants to add a todo - execute the action
+      const formData: TodoFormData = {
+        name: todoTool.name,
+        category: todoTool.category,
+        priority: todoTool.priority
+      }
+      
+      // Add the todo
+      await addTodo(formData)
+      
+      return {
+        success: true,
+        data: {
+          message: `Added todo: "${todoTool.name}" to ${todoTool.category} with ${todoTool.priority}. ${todoTool.reasoning}`,
+          todoTool
         }
       }
     }
     
-    // Otherwise, return the todo action intent
-    const todoActionIntent: TodoActionIntent = {
-      action: todoAnalysis.action,
-      // TodoItem and Todo have the same structure now
-      todo: todoAnalysis.todo as Todo | undefined,
-      reasoning: todoAnalysis.reasoning
-    }
-    
+    // Fallback - should not happen with current tool types
     return {
       success: true,
       data: {
-        message: `I understand you want to ${todoAnalysis.action} a todo. ${todoAnalysis.reasoning}`,
-        todoAction: todoActionIntent
+        message: `I received your request but couldn't process it properly.`,
+        todoTool
       }
     }
   } catch (error) {
