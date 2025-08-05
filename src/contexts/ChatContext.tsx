@@ -5,8 +5,7 @@ import { sendChatMessage } from '@/actions/chat'
 import { generateId } from '@/lib/utils'
 import { 
   createUserMessage, 
-  createAssistantMessageWithId,
-  createErrorMessage
+  createAssistantMessageWithId
 } from './ChatContext.helpers'
 import type { 
   ChatState, 
@@ -21,17 +20,12 @@ import type {
 const initialState: ChatState = {
   messages: [],
   isLoading: false,
-  error: null,
   streamingMessageId: undefined
 }
 
 // Reducer function
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
-    case 'SET_LOADING':
-      return { ...state, isLoading: action.payload }
-    case 'SET_ERROR':
-      return { ...state, error: action.payload }
     case 'ADD_MESSAGE':
       return { ...state, messages: [...state.messages, action.payload] }
     case 'UPDATE_MESSAGE':
@@ -43,23 +37,20 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
             : msg
         )
       }
-    case 'SET_MESSAGES':
-      return { ...state, messages: action.payload }
     case 'CLEAR_MESSAGES':
       return {
         ...state,
         messages: [],
-        error: null,
         streamingMessageId: undefined
       }
     case 'SET_STREAMING_ID':
       return { ...state, streamingMessageId: action.payload }
     case 'START_CHAT':
-      return { ...state, isLoading: true, error: null }
+      return { ...state, isLoading: true }
     case 'COMPLETE_CHAT':
       return { ...state, isLoading: false, streamingMessageId: undefined }
     case 'CHAT_ERROR':
-      return { ...state, error: action.payload, isLoading: false, streamingMessageId: undefined }
+      return { ...state, isLoading: false, streamingMessageId: undefined }
     default:
       return state
   }
@@ -106,12 +97,9 @@ export function ChatProvider({ children }: ChatProviderProps) {
       dispatch({ type: 'UPDATE_MESSAGE', payload: { id: assistantMessageId, content: responseMessage } })
       dispatch({ type: 'COMPLETE_CHAT' })
       
-    } catch (err) {
-      // Handle error
-      const errorMessage = createErrorMessage(err)
-      dispatch({ type: 'CHAT_ERROR', payload: errorMessage })
-      
-      // Remove the placeholder assistant message on error
+    } catch {
+      // Handle error - just update the assistant message with error text
+      dispatch({ type: 'CHAT_ERROR', payload: '' })
       dispatch({ 
         type: 'UPDATE_MESSAGE', 
         payload: { 
@@ -122,28 +110,18 @@ export function ChatProvider({ children }: ChatProviderProps) {
     }
   }, [state.messages])
 
-  const clearMessages = useCallback(() => {
-    dispatch({ type: 'CLEAR_MESSAGES' })
-  }, [])
-
   // Computed properties
   const messageCount = state.messages.length
-  const hasMessages = state.messages.length > 0
-  const lastMessage = state.messages.length > 0 ? state.messages[state.messages.length - 1] : null
 
   const contextValue: ChatContextType = {
     messages: state.messages,
     isLoading: state.isLoading,
-    error: state.error,
     streamingMessageId: state.streamingMessageId,
-    messageCount,
-    hasMessages,
-    lastMessage
+    messageCount
   }
 
   const dispatchValue: ChatDispatchContextType = {
-    handleSendMessage,
-    clearMessages
+    handleSendMessage
   }
 
   return (

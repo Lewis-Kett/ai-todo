@@ -35,11 +35,8 @@ describe('ChatContext', () => {
 
       expect(result.current.messages).toEqual([])
       expect(result.current.isLoading).toBe(false)
-      expect(result.current.error).toBeNull()
       expect(result.current.streamingMessageId).toBeUndefined()
       expect(result.current.messageCount).toBe(0)
-      expect(result.current.hasMessages).toBe(false)
-      expect(result.current.lastMessage).toBeNull()
     })
 
     it('throws error when used outside provider', () => {
@@ -90,7 +87,6 @@ describe('ChatContext', () => {
         timestamp: expect.any(Date)
       })
       expect(result.current.isLoading).toBe(false)
-      expect(result.current.error).toBeNull()
     })
 
     it('handles message send failure', async () => {
@@ -109,7 +105,6 @@ describe('ChatContext', () => {
       expect(result.current.messages[0].role).toBe('user')
       expect(result.current.messages[1].content).toBe('Sorry, I encountered an error. Please try again.')
       expect(result.current.isLoading).toBe(false)
-      expect(result.current.error).toBe('Network error')
     })
 
     it('sets loading and streaming states correctly', async () => {
@@ -145,86 +140,6 @@ describe('ChatContext', () => {
     })
   })
 
-  describe('sendMessage', () => {
-    it('handles successful API call', async () => {
-      mockSendChatMessage.mockResolvedValueOnce({
-        success: true,
-        data: {
-          message: 'Response',
-          confidence: 0.9
-        }
-      })
-
-      const { result } = renderHook(() => useChat(), { wrapper })
-
-      let response
-      await act(async () => {
-        response = await result.current.sendMessage('Test', [])
-      })
-
-      expect(response).toEqual({
-        message: 'Response',
-        confidence: 0.9
-      })
-      expect(result.current.isLoading).toBe(false)
-      expect(result.current.error).toBeNull()
-    })
-
-    it('throws error on API failure', async () => {
-      mockSendChatMessage.mockResolvedValueOnce({
-        success: false,
-        error: 'API Error'
-      })
-
-      const { result } = renderHook(() => useChat(), { wrapper })
-
-      // Capture error from sendMessage
-      let thrownError: Error | null = null
-      
-      await act(async () => {
-        try {
-          await result.current.sendMessage('Test', [])
-        } catch (e) {
-          thrownError = e as Error
-        }
-      })
-      
-      // Verify the error was thrown
-      expect(thrownError).not.toBeNull()
-      expect(thrownError!.message).toBe('API Error')
-      
-      // The error state should be set after the failed call
-      expect(result.current.error).toBe('API Error')
-      expect(result.current.isLoading).toBe(false)
-    })
-  })
-
-  describe('clearMessages', () => {
-    it('clears all messages and resets state', async () => {
-      mockSendChatMessage.mockResolvedValueOnce({
-        success: true,
-        data: { message: 'Response' }
-      })
-
-      const { result } = renderHook(() => useChat(), { wrapper })
-
-      // Add some messages
-      await act(async () => {
-        await result.current.handleSendMessage('Test')
-      })
-
-      expect(result.current.messages.length).toBeGreaterThan(0)
-
-      // Clear messages
-      act(() => {
-        result.current.clearMessages()
-      })
-
-      expect(result.current.messages).toEqual([])
-      expect(result.current.error).toBeNull()
-      expect(result.current.streamingMessageId).toBeUndefined()
-    })
-  })
 
   describe('computed properties', () => {
     it('updates messageCount correctly', async () => {
@@ -244,43 +159,5 @@ describe('ChatContext', () => {
       expect(result.current.messageCount).toBe(2)
     })
 
-    it('updates hasMessages correctly', async () => {
-      mockSendChatMessage.mockResolvedValueOnce({
-        success: true,
-        data: { message: 'Response' }
-      })
-
-      const { result } = renderHook(() => useChat(), { wrapper })
-
-      expect(result.current.hasMessages).toBe(false)
-
-      await act(async () => {
-        await result.current.handleSendMessage('Test')
-      })
-
-      expect(result.current.hasMessages).toBe(true)
-    })
-
-    it('updates lastMessage correctly', async () => {
-      mockSendChatMessage.mockResolvedValueOnce({
-        success: true,
-        data: { message: 'AI Response' }
-      })
-
-      const { result } = renderHook(() => useChat(), { wrapper })
-
-      expect(result.current.lastMessage).toBeNull()
-
-      await act(async () => {
-        await result.current.handleSendMessage('User message')
-      })
-
-      expect(result.current.lastMessage).toEqual({
-        id: 'id-2',
-        role: 'assistant',
-        content: 'AI Response',
-        timestamp: expect.any(Date)
-      })
-    })
   })
 })

@@ -61,12 +61,7 @@ describe('ChatInterface', () => {
       isLoading: false,
       streamingMessageId: undefined,
       messageCount: 0,
-      handleSendMessage: jest.fn(),
-      error: null,
-      hasMessages: false,
-      lastMessage: null,
-      sendMessage: jest.fn(),
-      clearMessages: jest.fn(),
+      handleSendMessage: jest.fn()
     })
   })
 
@@ -113,12 +108,7 @@ describe('ChatInterface', () => {
       isLoading: false,
       streamingMessageId: undefined,
       messageCount: 5,
-      handleSendMessage: jest.fn(),
-      error: null,
-      hasMessages: false,
-      lastMessage: null,
-      sendMessage: jest.fn(),
-      clearMessages: jest.fn(),
+      handleSendMessage: jest.fn()
     })
     
     render(
@@ -147,12 +137,7 @@ describe('ChatInterface', () => {
       isLoading: false,
       streamingMessageId: undefined,
       messageCount: 0,
-      handleSendMessage: mockHandleSendMessage,
-      error: null,
-      hasMessages: false,
-      lastMessage: null,
-      sendMessage: jest.fn(),
-      clearMessages: jest.fn(),
+      handleSendMessage: mockHandleSendMessage
     })
     
     render(
