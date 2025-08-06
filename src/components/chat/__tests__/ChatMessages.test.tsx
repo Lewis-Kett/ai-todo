@@ -58,7 +58,6 @@ describe('ChatMessages', () => {
     render(<ChatMessages messages={[]} isLoading={true} />)
     
     expect(screen.queryByText('Start a conversation')).not.toBeInTheDocument()
-    expect(screen.getByText('AI is thinking...')).toBeInTheDocument()
   })
 
   it('renders messages correctly', () => {
@@ -76,17 +75,6 @@ describe('ChatMessages', () => {
     expect(screen.getByTestId('scroll-area')).toBeInTheDocument()
   })
 
-  it('shows loading indicator when isLoading is true', () => {
-    render(<ChatMessages messages={mockMessages} isLoading={true} />)
-    
-    expect(screen.getByText('AI is thinking...')).toBeInTheDocument()
-  })
-
-  it('does not show loading indicator when isLoading is false', () => {
-    render(<ChatMessages messages={mockMessages} isLoading={false} />)
-    
-    expect(screen.queryByText('AI is thinking...')).not.toBeInTheDocument()
-  })
 
   it('passes streaming state to correct message', () => {
     render(

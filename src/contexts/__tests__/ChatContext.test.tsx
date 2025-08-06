@@ -18,6 +18,24 @@ jest.mock('@/lib/utils', () => ({
 const mockSendChatMessage = sendChatMessage as jest.MockedFunction<typeof sendChatMessage>
 const mockGenerateId = generateId as jest.MockedFunction<typeof generateId>
 
+// Helper function to create mock streams
+const createMockStream = (responses: Array<{ partial?: any; final?: any }>) => {
+  const readMock = jest.fn()
+  
+  responses.forEach((response) => {
+    readMock.mockResolvedValueOnce({
+      done: false,
+      value: new TextEncoder().encode(JSON.stringify(response))
+    })
+  })
+  
+  readMock.mockResolvedValueOnce({ done: true })
+  
+  return {
+    getReader: () => ({ read: readMock })
+  }
+}
+
 describe('ChatContext', () => {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ChatProvider>{children}</ChatProvider>
@@ -58,14 +76,12 @@ describe('ChatContext', () => {
 
   describe('handleSendMessage', () => {
     it('handles successful message send', async () => {
-      mockSendChatMessage.mockResolvedValueOnce({
-        success: true,
-        data: {
-          message: 'AI response',
-          confidence: 0.9,
-          suggestions: []
-        }
-      })
+      const mockStream = createMockStream([
+        { partial: { responseToUser: 'AI response' } },
+        { final: { action: 'chat', responseToUser: 'AI response' } }
+      ])
+
+      mockSendChatMessage.mockResolvedValueOnce(mockStream as any)
 
       const { result } = renderHook(() => useChat(), { wrapper })
 
@@ -88,10 +104,7 @@ describe('ChatContext', () => {
     })
 
     it('handles message send failure', async () => {
-      mockSendChatMessage.mockResolvedValueOnce({
-        success: false,
-        error: 'Network error'
-      })
+      mockSendChatMessage.mockRejectedValueOnce(new Error('Network error'))
 
       const { result } = renderHook(() => useChat(), { wrapper })
 
@@ -106,11 +119,32 @@ describe('ChatContext', () => {
     })
 
     it('sets loading and streaming states correctly', async () => {
-      let resolvePromise: (value: any) => void
-      const promise = new Promise((resolve) => {
-        resolvePromise = resolve
+      let resolveRead: () => void
+      const readPromise = new Promise<void>((resolve) => {
+        resolveRead = resolve
       })
-      mockSendChatMessage.mockReturnValueOnce(promise as any)
+      
+      // Create a custom mock stream with delayed response
+      const readMock = jest.fn()
+        .mockResolvedValueOnce({
+          done: false,
+          value: new TextEncoder().encode(JSON.stringify({
+            partial: { responseToUser: 'Response' }
+          }))
+        })
+        .mockImplementationOnce(() => readPromise.then(() => ({
+          done: false,
+          value: new TextEncoder().encode(JSON.stringify({
+            final: { action: 'chat', responseToUser: 'Response' }
+          }))
+        })))
+        .mockResolvedValueOnce({ done: true })
+      
+      const mockStream = {
+        getReader: () => ({ read: readMock })
+      }
+      
+      mockSendChatMessage.mockResolvedValueOnce(mockStream as any)
 
       const { result } = renderHook(() => useChat(), { wrapper })
 
@@ -123,13 +157,11 @@ describe('ChatContext', () => {
       expect(result.current.isLoading).toBe(true)
       expect(result.current.streamingMessageId).toBe('id-2')
 
-      // Resolve the promise
+      // Resolve the read promise to complete streaming
       await act(async () => {
-        resolvePromise!({
-          success: true,
-          data: { message: 'Response' }
-        })
-        await promise
+        resolveRead!()
+        // Wait for the streaming to complete
+        await new Promise(resolve => setTimeout(resolve, 0))
       })
 
       // Check loading state is false
@@ -141,10 +173,11 @@ describe('ChatContext', () => {
 
   describe('computed properties', () => {
     it('updates messageCount correctly', async () => {
-      mockSendChatMessage.mockResolvedValueOnce({
-        success: true,
-        data: { message: 'Response' }
-      })
+      const mockStream = createMockStream([
+        { final: { action: 'chat', responseToUser: 'Response' } }
+      ])
+      
+      mockSendChatMessage.mockResolvedValueOnce(mockStream as any)
 
       const { result } = renderHook(() => useChat(), { wrapper })
 

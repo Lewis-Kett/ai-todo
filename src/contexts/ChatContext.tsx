@@ -83,18 +83,60 @@ export function ChatProvider({ children }: ChatProviderProps) {
 
     try {
       // Call server action with existing conversation history (not including current message)
-      const result = await sendChatMessage(content, state.messages)
+      const stream = await sendChatMessage(content, state.messages)
       
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to send message')
+      // Create a reader for the stream
+      const reader = stream.getReader()
+      const decoder = new TextDecoder()
+      
+      // Read stream chunks
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        
+        const chunk = decoder.decode(value, { stream: true }).trim()
+        if (!chunk) continue
+        
+        try {
+          const parsed = JSON.parse(chunk)
+          
+          // Handle streaming partial response
+          if (parsed.partial?.responseToUser) {
+            dispatch({ 
+              type: 'UPDATE_MESSAGE', 
+              payload: { 
+                id: assistantMessageId, 
+                content: parsed.partial.responseToUser 
+              } 
+            })
+          }
+          
+          // Handle final response
+          if (parsed.final) {
+            // Execute tool actions if needed
+            if (parsed.final.action && parsed.final.action !== 'chat') {
+              const { handleChatToolResponse } = await import('@/actions/chat-tool-handler')
+              await handleChatToolResponse(parsed.final)
+            }
+            
+            // Update with final message
+            dispatch({ 
+              type: 'UPDATE_MESSAGE', 
+              payload: { 
+                id: assistantMessageId, 
+                content: parsed.final.responseToUser 
+              } 
+            })
+          }
+        } catch (parseError) {
+          console.error('Error parsing stream chunk:', parseError)
+        }
       }
       
-      // Update assistant message with response
-      const responseMessage = result.data?.message || 'No response received'
-      dispatch({ type: 'UPDATE_MESSAGE', payload: { id: assistantMessageId, content: responseMessage } })
       dispatch({ type: 'COMPLETE_CHAT' })
       
-    } catch {
+    } catch (error) {
+      console.error('Chat streaming error:', error)
       // Handle error - just update the assistant message with error text
       dispatch({ type: 'CHAT_ERROR', payload: '' })
       dispatch({ 
