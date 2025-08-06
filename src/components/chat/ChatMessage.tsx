@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { type ChatMessage as ChatMessageType } from '@/types/chat'
+import { useTypewriter } from '@/hooks/useTypewriter'
 
 interface ChatMessageProps {
   message: ChatMessageType
@@ -11,6 +12,10 @@ interface ChatMessageProps {
 
 export const ChatMessage = memo(function ChatMessage({ message, isStreaming = false }: ChatMessageProps) {
   const isUser = message.role === 'user'
+  
+  // Use typewriter effect only for assistant messages that are streaming
+  const shouldStartAnimation = !isUser && isStreaming
+  const displayedContent = useTypewriter(message.content, shouldStartAnimation)
   
   return (
     <div
@@ -39,7 +44,7 @@ export const ChatMessage = memo(function ChatMessage({ message, isStreaming = fa
               : 'bg-muted text-muted-foreground'
           )}
         >
-          {message.content}
+          {displayedContent}
           {isStreaming && (
             <span className="animate-pulse ml-1">▋</span>
           )}
