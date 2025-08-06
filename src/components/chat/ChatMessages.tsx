@@ -47,14 +47,6 @@ export function ChatMessages({
             isStreaming={message.id === streamingMessageId}
           />
         ))}
-        {isLoading && (
-          <div className="flex justify-center p-4">
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
-              AI is thinking...
-            </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
     </ScrollArea>
