@@ -4,7 +4,7 @@ import type {
   ToggleTodoTool,
   UpdateTodoTool,
   ChatTool,
-} from "../../../../baml_client/types"
+} from "@/baml_client/types"
 import { handleChatToolResponse } from "@/actions/chat-tool-handler"
 
 export type FinalDataType =

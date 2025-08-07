@@ -2,11 +2,11 @@ import { memo } from 'react'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { type ChatMessage as ChatMessageType } from '@/types/chat'
+import type { Message } from '@/baml_client/types'
 import { useTypewriter } from '@/hooks/useTypewriter'
 
 interface ChatMessageProps {
-  message: ChatMessageType
+  message: Message
   isStreaming?: boolean
 }
 

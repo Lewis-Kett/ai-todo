@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { ChatMessage } from '../ChatMessage'
-import { type ChatMessage as ChatMessageType } from '@/types/chat'
+import type { Message } from '@/baml_client/types'
 import { useTypewriter } from '@/hooks/useTypewriter'
 
 // Mock the useTypewriter hook
@@ -11,13 +11,13 @@ jest.mock('@/hooks/useTypewriter', () => ({
 const mockUseTypewriter = useTypewriter as jest.MockedFunction<typeof useTypewriter>
 
 describe('ChatMessage', () => {
-  const mockUserMessage: ChatMessageType = {
+  const mockUserMessage: Message = {
     id: '1',
     role: 'user',
     content: 'Hello, how are you?'
   }
 
-  const mockAssistantMessage: ChatMessageType = {
+  const mockAssistantMessage: Message = {
     id: '2',
     role: 'assistant',
     content: 'I am doing well, thank you!'

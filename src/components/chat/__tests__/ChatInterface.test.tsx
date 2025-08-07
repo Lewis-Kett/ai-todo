@@ -1,11 +1,11 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { ChatInterface } from '../ChatInterface'
-import { useHandleTodoRequest } from '../../../../baml_client/react/hooks'
+import { useHandleTodoRequest } from '@/baml_client/react/hooks'
 import type { BamlErrors } from '@boundaryml/baml/errors'
 import { getTodos } from '@/actions/todo-actions'
 
 // Mock the BAML hook
-jest.mock('../../../../baml_client/react/hooks', () => ({
+jest.mock('@/baml_client/react/hooks', () => ({
   useHandleTodoRequest: jest.fn()
 }))
 
@@ -98,6 +98,7 @@ describe('ChatInterface with BAML Integration', () => {
     
     expect(mockUseHandleTodoRequest).toHaveBeenCalledWith({
       stream: true,
+      onStreamData: expect.any(Function),
       onFinalData: expect.any(Function)
     })
   })

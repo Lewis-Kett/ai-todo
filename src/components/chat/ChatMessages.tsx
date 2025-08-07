@@ -3,10 +3,10 @@
 import { useEffect, useRef } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ChatMessage } from './ChatMessage'
-import { type ChatMessage as ChatMessageType } from '@/types/chat'
+import type { Message } from '@/baml_client/types'
 
 interface ChatMessagesProps {
-  messages: ChatMessageType[]
+  messages: Message[]
   streamingMessageId?: string
   isLoading?: boolean
   error?: string

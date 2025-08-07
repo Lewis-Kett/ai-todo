@@ -1,25 +1,24 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { useHandleTodoRequest } from "../../../../baml_client/react/hooks"
-import type { Message } from "../../../../baml_client/types"
+import { useHandleTodoRequest } from "@/baml_client/react/hooks"
+import type { Message } from "@/baml_client/types"
 import { getTodos } from "@/actions/todo-actions"
 import {
   getErrorMessage,
   processToolResponse,
   type FinalDataType,
 } from "../utils/toolProcessor"
-
-// Convert BAML Message type to our ChatMessage type
-export type ChatMessage = {
-  id: string
-  role: "user" | "assistant" | "system"
-  content: string
-}
+import {
+  createUserMessage,
+  createStreamingPlaceholder,
+  isStreamingPlaceholder,
+  STREAMING_MESSAGE_ID,
+} from "../utils/messageUtils"
 
 export function useChat() {
   // Single state array for all messages
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   
   const hookResult = useHandleTodoRequest({
     stream: true,
@@ -27,7 +26,7 @@ export function useChat() {
       // Update placeholder message content during streaming
       if (streamData?.responseToUser) {
         setMessages(prev => prev.map(msg => 
-          msg.id === "assistant-streaming" 
+          isStreamingPlaceholder(msg)
             ? { ...msg, content: streamData.responseToUser }
             : msg
         ))
@@ -39,7 +38,7 @@ export function useChat() {
       // Replace placeholder with final assistant message
       if (finalData.responseToUser) {
         setMessages(prev => prev.map(msg => 
-          msg.id === "assistant-streaming"
+          isStreamingPlaceholder(msg)
             ? { ...msg, id: crypto.randomUUID(), content: finalData.responseToUser }
             : msg
         ))
@@ -55,43 +54,30 @@ export function useChat() {
   })
 
   const streamingMessageId = hookResult.isStreaming
-    ? "assistant-streaming"
+    ? STREAMING_MESSAGE_ID
     : undefined
 
   const messageCount = messages.length
 
-  // Simplified send message function using functional updates
+  // Simplified send message function using utility functions
   const sendMessage = useCallback(
     async (content: string) => {
       try {
         const currentTodos = await getTodos()
         
+        // Create messages using utility functions
+        const userMessage = createUserMessage(content)
+        const placeholderMessage = createStreamingPlaceholder()
+        
         // First, update the UI immediately
         let bamlMessages: Message[] = []
         
         setMessages(prev => {
-          const userMessage: ChatMessage = {
-            id: crypto.randomUUID(),
-            role: "user",
-            content,
-          }
-          
-          const placeholderMessage: ChatMessage = {
-            id: "assistant-streaming",
-            role: "assistant",
-            content: "",
-          }
-          
           const newMessages = [...prev, userMessage, placeholderMessage]
           
           // Prepare BAML messages (exclude placeholder) for use outside
           bamlMessages = newMessages
-            .filter(msg => msg.id !== "assistant-streaming")
-            .map(msg => ({
-              id: msg.id,
-              role: msg.role,
-              content: msg.content
-            }))
+            .filter(msg => !isStreamingPlaceholder(msg))
           
           return newMessages
         })

@@ -2,7 +2,7 @@
 
 import { type ApiResponse, type ChatResponse } from '@/types/chat'
 import { type TodoFormData } from '@/types/todo'
-import { type AddTodoTool, type ChatTool, type DeleteTodoTool, type ToggleTodoTool, type UpdateTodoTool } from '../../baml_client/types'
+import { type AddTodoTool, type ChatTool, type DeleteTodoTool, type ToggleTodoTool, type UpdateTodoTool } from '@/baml_client/types'
 import { addTodo, deleteTodo, toggleTodoComplete, updateTodo } from './todo-actions'
 
 export async function handleChatToolResponse(

@@ -1,10 +1,4 @@
-import type { AddTodoTool, ChatTool, DeleteTodoTool, ToggleTodoTool, UpdateTodoTool } from '../../baml_client/types'
-
-export interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant' | 'system'
-  content: string
-}
+import type { AddTodoTool, ChatTool, DeleteTodoTool, ToggleTodoTool, UpdateTodoTool } from '@/baml_client/types'
 
 // New tool-based action types
 export type TodoTool = AddTodoTool | DeleteTodoTool | ToggleTodoTool | UpdateTodoTool | ChatTool

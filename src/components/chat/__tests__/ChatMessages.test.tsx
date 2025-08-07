@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { ChatMessages } from '../ChatMessages'
-import { type ChatMessage } from '@/types/chat'
+import type { Message } from '@/baml_client/types'
 
 interface MockScrollAreaProps {
   children: React.ReactNode
@@ -34,7 +34,7 @@ jest.mock('../ChatMessage', () => ({
 }))
 
 describe('ChatMessages', () => {
-  const mockMessages: ChatMessage[] = [
+  const mockMessages: Message[] = [
     {
       id: '1',
       role: 'user',

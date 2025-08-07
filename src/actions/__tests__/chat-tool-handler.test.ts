@@ -1,6 +1,6 @@
 import { handleChatToolResponse } from '../chat-tool-handler'
 import { addTodo, deleteTodo, toggleTodoComplete, updateTodo } from '../todo-actions'
-import { type AddTodoTool, type ChatTool, type DeleteTodoTool, type ToggleTodoTool, type UpdateTodoTool } from '../../../baml_client/types'
+import { type AddTodoTool, type ChatTool, type DeleteTodoTool, type ToggleTodoTool, type UpdateTodoTool } from '@/baml_client/types'
 
 // Mock the todo-actions module
 jest.mock('../todo-actions', () => ({

@@ -1,11 +1,12 @@
 import { renderHook, act } from "@testing-library/react"
-import { useChatHook } from "../useChat"
-import { useHandleTodoRequest } from "../../../../../baml_client/react/hooks"
+import { useChat } from "../useChat"
+import { useHandleTodoRequest } from "@/baml_client/react/hooks"
 import { getTodos } from "@/actions/todo-actions"
 import { processToolResponse } from "../../utils/toolProcessor"
+import { STREAMING_MESSAGE_ID } from "../../utils/messageUtils"
 
 // Mock the BAML hook
-jest.mock("../../../../../baml_client/react/hooks", () => ({
+jest.mock("@/baml_client/react/hooks", () => ({
   useHandleTodoRequest: jest.fn(),
 }))
 
@@ -28,7 +29,7 @@ const mockProcessToolResponse = processToolResponse as jest.MockedFunction<
   typeof processToolResponse
 >
 
-describe("useChatHook", () => {
+describe("useChat", () => {
   const mockMutate = jest.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
@@ -51,7 +52,7 @@ describe("useChatHook", () => {
   })
 
   it("configures BAML hook with streaming enabled and callbacks", () => {
-    renderHook(() => useChatHook())
+    renderHook(() => useChat())
 
     expect(mockUseHandleTodoRequest).toHaveBeenCalledWith({
       stream: true,
@@ -61,7 +62,7 @@ describe("useChatHook", () => {
   })
 
   it("returns messages state and derived values", () => {
-    const { result } = renderHook(() => useChatHook())
+    const { result } = renderHook(() => useChat())
 
     expect(result.current).toEqual({
       messages: [],
@@ -75,7 +76,7 @@ describe("useChatHook", () => {
   })
 
   it("sendMessage calls BAML mutate with user message and todos", async () => {
-    const { result } = renderHook(() => useChatHook())
+    const { result } = renderHook(() => useChat())
 
     await act(async () => {
       await result.current.sendMessage("Hello")
@@ -111,14 +112,14 @@ describe("useChatHook", () => {
       reset: jest.fn(),
     })
 
-    const { result } = renderHook(() => useChatHook())
+    const { result } = renderHook(() => useChat())
 
-    expect(result.current.streamingMessageId).toBe("assistant-streaming")
+    expect(result.current.streamingMessageId).toBe(STREAMING_MESSAGE_ID)
   })
 
   it("handles sendMessage error correctly", async () => {
     mockGetTodos.mockRejectedValue(new Error("Failed to load todos"))
-    const { result } = renderHook(() => useChatHook())
+    const { result } = renderHook(() => useChat())
 
     await act(async () => {
       await result.current.sendMessage("test")
@@ -144,7 +145,7 @@ describe("useChatHook", () => {
       reset: jest.fn(),
     })
 
-    const { result } = renderHook(() => useChatHook())
+    const { result } = renderHook(() => useChat())
 
     // When not streaming and no conversation history exists, messages should be empty
     // Final responses are added to conversation history via onFinalData callback
@@ -167,7 +168,7 @@ describe("useChatHook", () => {
       reset: jest.fn(),
     })
 
-    const { result } = renderHook(() => useChatHook())
+    const { result } = renderHook(() => useChat())
     
     // First send a message to create the placeholder
     await act(async () => {
@@ -177,7 +178,7 @@ describe("useChatHook", () => {
     // Should have user message + placeholder
     expect(result.current.messages).toHaveLength(2)
     expect(result.current.messages[1]).toEqual({
-      id: "assistant-streaming",
+      id: STREAMING_MESSAGE_ID,
       role: "assistant",
       content: "", // Initially empty, will be updated by onStreamData
     })
@@ -192,7 +193,7 @@ describe("useChatHook", () => {
       responseToUser: "Added todo",
     }
 
-    renderHook(() => useChatHook())
+    renderHook(() => useChat())
 
     // Get the onFinalData callback and call it
     const onFinalDataCall = mockUseHandleTodoRequest.mock.calls[0][0]
@@ -206,7 +207,7 @@ describe("useChatHook", () => {
   })
 
   it("replaces placeholder with final response via onFinalData callback", async () => {
-    const { result } = renderHook(() => useChatHook())
+    const { result } = renderHook(() => useChat())
     
     // First send a message to create the placeholder
     await act(async () => {
@@ -215,7 +216,7 @@ describe("useChatHook", () => {
     
     // Should have user message + placeholder
     expect(result.current.messages).toHaveLength(2)
-    expect(result.current.messages[1].id).toBe("assistant-streaming")
+    expect(result.current.messages[1].id).toBe(STREAMING_MESSAGE_ID)
     
     const mockFinalData = {
       action: "chat" as const,
@@ -238,11 +239,11 @@ describe("useChatHook", () => {
       content: "Hello from assistant!",
     })
     // ID should have changed from placeholder
-    expect(result.current.messages[1].id).not.toBe("assistant-streaming")
+    expect(result.current.messages[1].id).not.toBe(STREAMING_MESSAGE_ID)
   })
 
   it("sends message adds both user message and placeholder immediately", async () => {
-    const { result } = renderHook(() => useChatHook())
+    const { result } = renderHook(() => useChat())
 
     await act(async () => {
       await result.current.sendMessage("Hello from user")
@@ -260,7 +261,7 @@ describe("useChatHook", () => {
     
     // Placeholder assistant message
     expect(result.current.messages[1]).toEqual({
-      id: "assistant-streaming",
+      id: STREAMING_MESSAGE_ID,
       role: "assistant",
       content: "",
     })
