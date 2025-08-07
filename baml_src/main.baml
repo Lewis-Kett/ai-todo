@@ -20,19 +20,19 @@ class AddTodoTool {
   name string @description("The todo item name")
   category string @description("Category like Work, Personal, etc.")
   priority "High Priority" | "Medium Priority" | "Low Priority"
-  responseToUser string @description("Your response to the users request") 
+  responseToUser string @stream.not_null @description("Your response to the users request") 
 }
 
 class DeleteTodoTool {
   action "delete_todo"
   id string @description("The ID of the todo item to delete")
-  responseToUser string @description("Your response to the users request")
+  responseToUser string @stream.not_null @description("Your response to the users request")
 }
 
 class ToggleTodoTool {
   action "toggle_todo"
   id string @description("The ID of the todo item to toggle completion status")
-  responseToUser string @description("Your response to the users request")
+  responseToUser string @stream.not_null @description("Your response to the users request")
 }
 
 class UpdateTodoTool {
@@ -41,12 +41,12 @@ class UpdateTodoTool {
   name string? @description("New name for the todo item (optional)")
   category string? @description("New category for the todo item (optional)")
   priority ("High Priority" | "Medium Priority" | "Low Priority")? @description("New priority for the todo item (optional)")
-  responseToUser string @description("Your response to the users request")
+  responseToUser string @stream.not_null @description("Your response to the users request")
 }
 
 class ChatTool {
   action "chat"
-  responseToUser string @description("Your response to the users request") 
+  responseToUser string @stream.not_null @description("Your response to the users request") 
 }
 
 // Configure LLM Client

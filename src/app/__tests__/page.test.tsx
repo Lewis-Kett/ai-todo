@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react"
-import { AppProviders } from "@/components/providers/AppProviders"
+import { ThemeProvider } from "@/components/theme-provider"
 import { TodoSectionTest } from "@/components/todo/__test-utils__/TodoSectionTest"
 import { ChatInterface } from "@/components/chat/ChatInterface"
 
@@ -27,7 +27,16 @@ jest.mock("@/hooks/useInlineEdit", () => ({
 
 describe("Home Page", () => {
   const renderWithProviders = (component: React.ReactElement) => {
-    return render(<AppProviders>{component}</AppProviders>)
+    return render(
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        {component}
+      </ThemeProvider>
+    )
   }
 
   const TestHomePage = () => (
