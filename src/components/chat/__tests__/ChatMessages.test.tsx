@@ -48,20 +48,20 @@ describe('ChatMessages', () => {
   ]
 
   it('renders empty state when no messages', () => {
-    render(<ChatMessages messages={[]} />)
+    render(<ChatMessages conversationHistory={[]} isStreaming={false} />)
     
     expect(screen.getByText('Start a conversation')).toBeInTheDocument()
     expect(screen.getByText('Ask me anything about your todos or productivity!')).toBeInTheDocument()
   })
 
   it('does not show empty state when loading', () => {
-    render(<ChatMessages messages={[]} isLoading={true} />)
+    render(<ChatMessages conversationHistory={[]} isLoading={true} isStreaming={false} />)
     
     expect(screen.queryByText('Start a conversation')).not.toBeInTheDocument()
   })
 
   it('renders messages correctly', () => {
-    render(<ChatMessages messages={mockMessages} />)
+    render(<ChatMessages conversationHistory={mockMessages} isStreaming={false} />)
     
     expect(screen.getByTestId('chat-message-1')).toBeInTheDocument()
     expect(screen.getByTestId('chat-message-2')).toBeInTheDocument()
@@ -70,7 +70,7 @@ describe('ChatMessages', () => {
   })
 
   it('renders messages with ScrollArea component', () => {
-    render(<ChatMessages messages={mockMessages} />)
+    render(<ChatMessages conversationHistory={mockMessages} isStreaming={false} />)
     
     expect(screen.getByTestId('scroll-area')).toBeInTheDocument()
   })
@@ -79,8 +79,9 @@ describe('ChatMessages', () => {
   it('passes streaming state to correct message', () => {
     render(
       <ChatMessages 
-        messages={mockMessages} 
+        conversationHistory={mockMessages} 
         streamingMessageId="2" 
+        isStreaming={true}
       />
     )
     
@@ -92,7 +93,7 @@ describe('ChatMessages', () => {
   })
 
   it('does not show streaming when streamingMessageId is undefined', () => {
-    render(<ChatMessages messages={mockMessages} />)
+    render(<ChatMessages conversationHistory={mockMessages} isStreaming={false} />)
     
     const message1 = screen.getByTestId('chat-message-1')
     const message2 = screen.getByTestId('chat-message-2')
@@ -102,7 +103,7 @@ describe('ChatMessages', () => {
   })
 
   it('renders messages in the correct order', () => {
-    render(<ChatMessages messages={mockMessages} />)
+    render(<ChatMessages conversationHistory={mockMessages} isStreaming={false} />)
     
     const messages = screen.getAllByTestId(/chat-message-/)
     expect(messages).toHaveLength(2)
@@ -111,7 +112,7 @@ describe('ChatMessages', () => {
   })
 
   it('renders with proper spacing classes', () => {
-    const { container } = render(<ChatMessages messages={mockMessages} />)
+    const { container } = render(<ChatMessages conversationHistory={mockMessages} isStreaming={false} />)
     
     const messagesContainer = container.querySelector('.space-y-2')
     expect(messagesContainer).toBeInTheDocument()

@@ -3,7 +3,6 @@ import { useChat } from "../useChat"
 import { useHandleTodoRequest } from "@/baml_client/react/hooks"
 import { getTodos } from "@/actions/todo-actions"
 import { processToolResponse } from "../../utils/toolProcessor"
-import { STREAMING_MESSAGE_ID } from "../../utils/messageUtils"
 
 // Mock the BAML hook
 jest.mock("@/baml_client/react/hooks", () => ({
@@ -61,13 +60,12 @@ describe("useChat", () => {
     })
   })
 
-  it("returns messages state and derived values", () => {
+  it("returns conversation state and derived values", () => {
     const { result } = renderHook(() => useChat())
 
     expect(result.current).toEqual({
-      messages: [],
+      conversationHistory: [],
       streamingMessageId: undefined,
-      messageCount: 0,
       sendMessage: expect.any(Function),
       isLoading: false,
       isStreaming: false,
@@ -75,7 +73,7 @@ describe("useChat", () => {
     })
   })
 
-  it("sendMessage calls BAML mutate with user message and todos", async () => {
+  it("sendMessage adds user and placeholder assistant messages", async () => {
     const { result } = renderHook(() => useChat())
 
     await act(async () => {
@@ -83,6 +81,15 @@ describe("useChat", () => {
     })
 
     expect(mockGetTodos).toHaveBeenCalled()
+    expect(result.current.conversationHistory).toHaveLength(2)
+    expect(result.current.conversationHistory[0]).toMatchObject({
+      role: "user",
+      content: "Hello",
+    })
+    expect(result.current.conversationHistory[1]).toMatchObject({
+      role: "assistant",
+      content: "",
+    })
     expect(mockMutate).toHaveBeenCalledWith(
       "Hello",
       [],
@@ -96,25 +103,16 @@ describe("useChat", () => {
     )
   })
 
-  it("returns streamingMessageId when streaming", () => {
-    mockUseHandleTodoRequest.mockReturnValue({
-      data: undefined,
-      streamData: { action: "chat", responseToUser: "Streaming..." },
-      finalData: undefined,
-      isLoading: false,
-      isPending: false,
-      isStreaming: true,
-      isSuccess: false,
-      isError: false,
-      error: undefined,
-      status: "streaming",
-      mutate: mockMutate,
-      reset: jest.fn(),
-    })
-
+  it("returns streamingMessageId when streaming after sending message", async () => {
     const { result } = renderHook(() => useChat())
 
-    expect(result.current.streamingMessageId).toBe(STREAMING_MESSAGE_ID)
+    await act(async () => {
+      await result.current.sendMessage("Hello")
+    })
+
+    // After sending a message, streaming message ID should be set
+    expect(result.current.streamingMessageId).toBeDefined()
+    expect(typeof result.current.streamingMessageId).toBe("string")
   })
 
   it("handles sendMessage error correctly", async () => {
@@ -149,7 +147,7 @@ describe("useChat", () => {
 
     // When not streaming and no conversation history exists, messages should be empty
     // Final responses are added to conversation history via onFinalData callback
-    expect(result.current.messages).toHaveLength(0)
+    expect(result.current.conversationHistory).toHaveLength(0)
   })
 
   it("includes streaming message when streaming (after sending a message)", async () => {
@@ -176,9 +174,9 @@ describe("useChat", () => {
     })
     
     // Should have user message + placeholder
-    expect(result.current.messages).toHaveLength(2)
-    expect(result.current.messages[1]).toEqual({
-      id: STREAMING_MESSAGE_ID,
+    expect(result.current.conversationHistory).toHaveLength(2)
+    expect(result.current.conversationHistory[1]).toMatchObject({
+      id: expect.any(String),
       role: "assistant",
       content: "", // Initially empty, will be updated by onStreamData
     })
@@ -206,7 +204,7 @@ describe("useChat", () => {
     expect(mockProcessToolResponse).toHaveBeenCalledWith(mockFinalData)
   })
 
-  it("replaces placeholder with final response via onFinalData callback", async () => {
+  it("updates placeholder with streaming and final response via callbacks", async () => {
     const { result } = renderHook(() => useChat())
     
     // First send a message to create the placeholder
@@ -215,8 +213,27 @@ describe("useChat", () => {
     })
     
     // Should have user message + placeholder
-    expect(result.current.messages).toHaveLength(2)
-    expect(result.current.messages[1].id).toBe(STREAMING_MESSAGE_ID)
+    expect(result.current.conversationHistory).toHaveLength(2)
+    const placeholderId = result.current.conversationHistory[1].id
+    expect(placeholderId).toBeDefined()
+    expect(result.current.conversationHistory[1].content).toBe("")
+    
+    // Simulate streaming data
+    const mockStreamData = {
+      action: "chat" as const,
+      responseToUser: "Hello from",
+    }
+
+    // Get the onStreamData callback and call it
+    const onStreamDataCall = mockUseHandleTodoRequest.mock.calls[0][0]
+    await act(async () => {
+      if (onStreamDataCall?.onStreamData) {
+        await onStreamDataCall.onStreamData(mockStreamData)
+      }
+    })
+
+    // Content should be updated with streaming data
+    expect(result.current.conversationHistory[1].content).toBe("Hello from")
     
     const mockFinalData = {
       action: "chat" as const,
@@ -224,22 +241,19 @@ describe("useChat", () => {
     }
 
     // Get the onFinalData callback and call it
-    const onFinalDataCall = mockUseHandleTodoRequest.mock.calls[0][0]
     await act(async () => {
-      if (onFinalDataCall?.onFinalData) {
-        await onFinalDataCall.onFinalData(mockFinalData)
+      if (onStreamDataCall?.onFinalData) {
+        await onStreamDataCall.onFinalData(mockFinalData)
       }
     })
 
-    // Should still have 2 messages, but placeholder is now replaced with final response
-    expect(result.current.messages).toHaveLength(2)
-    expect(result.current.messages[1]).toEqual({
-      id: expect.any(String), // New ID assigned
+    // Should still have 2 messages, with final content
+    expect(result.current.conversationHistory).toHaveLength(2)
+    expect(result.current.conversationHistory[1]).toMatchObject({
+      id: placeholderId, // Same ID as placeholder
       role: "assistant", 
       content: "Hello from assistant!",
     })
-    // ID should have changed from placeholder
-    expect(result.current.messages[1].id).not.toBe(STREAMING_MESSAGE_ID)
   })
 
   it("sends message adds both user message and placeholder immediately", async () => {
@@ -250,18 +264,18 @@ describe("useChat", () => {
     })
 
     // Both user message and placeholder should be added immediately
-    expect(result.current.messages).toHaveLength(2)
+    expect(result.current.conversationHistory).toHaveLength(2)
     
     // User message
-    expect(result.current.messages[0]).toEqual({
+    expect(result.current.conversationHistory[0]).toMatchObject({
       id: expect.any(String),
       role: "user",
       content: "Hello from user",
     })
     
     // Placeholder assistant message
-    expect(result.current.messages[1]).toEqual({
-      id: STREAMING_MESSAGE_ID,
+    expect(result.current.conversationHistory[1]).toMatchObject({
+      id: expect.any(String),
       role: "assistant",
       content: "",
     })

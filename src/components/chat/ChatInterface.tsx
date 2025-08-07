@@ -7,11 +7,11 @@ import { useChat } from "./hooks/useChat"
 
 export function ChatInterface() {
   const {
-    messages,
+    conversationHistory,
     streamingMessageId,
-    messageCount,
     sendMessage,
     isLoading,
+    isStreaming,
     error,
   } = useChat()
 
@@ -22,7 +22,7 @@ export function ChatInterface() {
           AI Assistant
         </h2>
         <div className="text-sm text-muted-foreground">
-          {messageCount} messages
+          {conversationHistory.length} messages
         </div>
       </CardHeader>
 
@@ -35,8 +35,9 @@ export function ChatInterface() {
           aria-label="Chat conversation"
         >
           <ChatMessages
-            messages={messages}
+            conversationHistory={conversationHistory}
             streamingMessageId={streamingMessageId}
+            isStreaming={isStreaming}
             isLoading={isLoading}
             error={error}
           />

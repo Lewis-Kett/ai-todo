@@ -29,9 +29,9 @@ jest.mock('../utils/toolProcessor', () => ({
 
 // Mock child components
 jest.mock('../ChatMessages', () => ({
-  ChatMessages: ({ messages, streamingMessageId, isLoading, error }: any) => (
+  ChatMessages: ({ conversationHistory, streamingMessageId, isLoading, error }: any) => (
     <div data-testid="chat-messages">
-      <div data-testid="messages-count">{messages.length}</div>
+      <div data-testid="messages-count">{conversationHistory.length}</div>
       <div data-testid="is-loading">{isLoading.toString()}</div>
       <div data-testid="streaming-id">{streamingMessageId || 'none'}</div>
       {error && <div data-testid="error-message">{error}</div>}
