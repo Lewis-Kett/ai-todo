@@ -21,9 +21,7 @@ jest.mock('@/actions/chat-tool-handler', () => ({
 
 // Mock the tool processor
 jest.mock('../utils/toolProcessor', () => ({
-  ChatToolProcessor: jest.fn().mockImplementation(() => ({
-    processToolResponse: jest.fn()
-  })),
+  processToolResponse: jest.fn(),
   getErrorMessage: jest.fn().mockReturnValue('Error occurred')
 }))
 

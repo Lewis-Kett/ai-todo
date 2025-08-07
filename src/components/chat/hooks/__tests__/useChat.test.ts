@@ -116,6 +116,9 @@ describe("useChat", () => {
   })
 
   it("handles sendMessage error correctly", async () => {
+    // Suppress console.error for this test since we're intentionally triggering an error
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    
     mockGetTodos.mockRejectedValue(new Error("Failed to load todos"))
     const { result } = renderHook(() => useChat())
 
@@ -125,6 +128,9 @@ describe("useChat", () => {
 
     // Error handling is now done through BAML hook's error state
     expect(mockGetTodos).toHaveBeenCalled()
+    
+    // Restore console.error
+    consoleSpy.mockRestore()
   })
 
   it("builds messages from conversation history only when not streaming", () => {
