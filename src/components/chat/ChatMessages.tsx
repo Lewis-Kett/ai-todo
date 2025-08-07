@@ -9,12 +9,14 @@ interface ChatMessagesProps {
   messages: ChatMessageType[]
   streamingMessageId?: string
   isLoading?: boolean
+  error?: string
 }
 
 export function ChatMessages({ 
   messages, 
   streamingMessageId,
-  isLoading = false 
+  isLoading = false,
+  error
 }: ChatMessagesProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -47,6 +49,11 @@ export function ChatMessages({
             isStreaming={message.id === streamingMessageId}
           />
         ))}
+        {error && (
+          <div className="bg-destructive/10 text-destructive p-3 rounded-md border border-destructive/20" role="alert">
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
     </ScrollArea>
