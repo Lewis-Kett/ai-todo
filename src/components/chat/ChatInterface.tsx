@@ -25,7 +25,7 @@ export function ChatInterface() {
         setMessages((prev) => [...prev, assistantMessage])
 
         if (data.action && data.action !== "chat") {
-          await handleChatToolResponse(data)
+          handleChatToolResponse(data)
         }
       }
     },

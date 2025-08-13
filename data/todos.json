@@ -1,0 +1,23 @@
+[
+  {
+    "id": "1",
+    "name": "Complete the project documentation",
+    "category": "Work",
+    "priority": "High Priority",
+    "completed": false
+  },
+  {
+    "id": "2",
+    "name": "Review pull requests",
+    "category": "Development",
+    "priority": "Medium Priority",
+    "completed": false
+  },
+  {
+    "id": "3",
+    "name": "Set up development environment",
+    "category": "Setup",
+    "priority": "High Priority",
+    "completed": true
+  }
+]

@@ -1,60 +1,39 @@
 'use server'
 
 import { revalidateTag, unstable_cache } from 'next/cache'
+import { promises as fs } from 'fs'
+import path from 'path'
 import { Todo, TodoFormData } from '@/types/todo'
 
-// Properly typed global declaration for shared todos
-declare global {
-  var __sharedTodos: Todo[] | undefined
-}
+// Path to todos data file
+const TODOS_FILE = path.join(process.cwd(), 'data', 'todos.json')
 
-// Initial todos data
-const INITIAL_TODOS: Todo[] = [
-  {
-    id: '1',
-    name: 'Complete the project documentation',
-    category: 'Work',
-    priority: 'High Priority',
-    completed: false,
-  },
-  {
-    id: '2',
-    name: 'Review pull requests',
-    category: 'Development',
-    priority: 'Medium Priority',
-    completed: false,
-  },
-  {
-    id: '3',
-    name: 'Set up development environment',
-    category: 'Setup',
-    priority: 'High Priority',
-    completed: true,
-  },
-]
-
-// Shared data store using Node.js global object to fix module instance issue
-// Get todos from global storage (shared across all module instances)
-function getTodosFromGlobal(): Todo[] {
-  if (!global.__sharedTodos) {
-    global.__sharedTodos = [...INITIAL_TODOS]
+// Read todos from file system
+async function getTodosFromFile(): Promise<Todo[]> {
+  try {
+    const data = await fs.readFile(TODOS_FILE, 'utf8')
+    return JSON.parse(data)
+  } catch {
+    // If file doesn't exist, return empty array
+    return []
   }
-  return global.__sharedTodos
 }
 
-// Set todos in global storage (shared across all module instances)
-function setTodosInGlobal(newTodos: Todo[]): void {
-  global.__sharedTodos = newTodos
+// Write todos to file system
+async function setTodosInFile(todos: Todo[]): Promise<void> {
+  // Ensure directory exists (safe to call repeatedly)
+  await fs.mkdir(path.dirname(TODOS_FILE), { recursive: true })
+  await fs.writeFile(TODOS_FILE, JSON.stringify(todos, null, 2), 'utf8')
 }
 
-// Internal function to get todos without caching
+// Internal function to get todos with simulated delay for consistency
 async function getTodosInternal(): Promise<Todo[]> {
-  const globalTodos = getTodosFromGlobal()
+  const todos = await getTodosFromFile()
   
   // Simulate async database call - configurable delay for testing
-  const delay = process.env.NODE_ENV === 'test' ? 0 : 1000
+  const delay = process.env.NODE_ENV === 'test' ? 0 : 100 // Reduced delay since we're reading from file
   await new Promise(resolve => setTimeout(resolve, delay))
-  return [...globalTodos]
+  return todos
 }
 
 // Cached version of getTodos with cache tags
@@ -70,7 +49,7 @@ export const getTodos = unstable_cache(
 )
 
 export async function addTodo(formData: TodoFormData): Promise<void> {
-  const currentTodos = getTodosFromGlobal()
+  const currentTodos = await getTodosFromFile()
   
   const newTodo: Todo = {
     id: crypto.randomUUID(),
@@ -81,26 +60,26 @@ export async function addTodo(formData: TodoFormData): Promise<void> {
   }
   
   const updatedTodos = [...currentTodos, newTodo]
-  setTodosInGlobal(updatedTodos)
+  await setTodosInFile(updatedTodos)
   
   revalidateTag('todos')
 }
 
 export async function deleteTodo(id: string): Promise<void> {
-  const currentTodos = getTodosFromGlobal()
+  const currentTodos = await getTodosFromFile()
   const updatedTodos = currentTodos.filter((todo: Todo) => todo.id !== id)
-  setTodosInGlobal(updatedTodos)
+  await setTodosInFile(updatedTodos)
   revalidateTag('todos')
 }
 
 export async function toggleTodoComplete(id: string): Promise<void> {
-  const currentTodos = getTodosFromGlobal()
+  const currentTodos = await getTodosFromFile()
   const updatedTodos = currentTodos.map((todo: Todo) =>
     todo.id === id 
       ? { ...todo, completed: !todo.completed }
       : todo
   )
-  setTodosInGlobal(updatedTodos)
+  await setTodosInFile(updatedTodos)
   revalidateTag('todos')
 }
 
@@ -108,13 +87,13 @@ export async function updateTodo(
   id: string, 
   updates: Partial<Omit<Todo, 'id'>>
 ): Promise<void> {
-  const currentTodos = getTodosFromGlobal()
+  const currentTodos = await getTodosFromFile()
   const updatedTodos = currentTodos.map((todo: Todo) =>
     todo.id === id 
       ? { ...todo, ...updates }
       : todo
   )
-  setTodosInGlobal(updatedTodos)
+  await setTodosInFile(updatedTodos)
   revalidateTag('todos')
 }
 

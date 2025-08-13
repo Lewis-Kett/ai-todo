@@ -16,11 +16,39 @@ jest.mock('next/cache', () => ({
 
 // Import the mocked function for testing
 import { revalidateTag } from 'next/cache'
+import { promises as fs } from 'fs'
+import path from 'path'
+
+const TODOS_FILE = path.join(process.cwd(), 'data', 'todos.json')
+const INITIAL_TEST_TODOS = [
+  {
+    id: '1',
+    name: 'Complete the project documentation',
+    category: 'Work',
+    priority: 'High Priority',
+    completed: false,
+  },
+  {
+    id: '2',
+    name: 'Review pull requests',
+    category: 'Development',
+    priority: 'Medium Priority',
+    completed: false,
+  },
+  {
+    id: '3',
+    name: 'Set up development environment',
+    category: 'Setup',
+    priority: 'High Priority',
+    completed: true,
+  },
+]
 
 describe('Todo Server Actions', () => {
-  beforeEach(() => {
-    // Reset the todos array to initial state before each test
-    // Note: In a real app, you'd reset your database state
+  beforeEach(async () => {
+    // Reset the todos file to initial state before each test
+    await fs.mkdir(path.dirname(TODOS_FILE), { recursive: true })
+    await fs.writeFile(TODOS_FILE, JSON.stringify(INITIAL_TEST_TODOS, null, 2), 'utf8')
     jest.clearAllMocks()
   })
 
