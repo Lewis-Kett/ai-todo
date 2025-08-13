@@ -3,17 +3,44 @@
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { ChatMessages } from "./ChatMessages"
 import { ChatInput } from "./ChatInput"
-import { useChat } from "./hooks/useChat"
+import { useHandleTodoRequest } from "@/baml_client/react/hooks"
+import { useState } from "react"
+import { Message } from "@/baml_client/types"
+import { getTodos } from "@/actions/todo-actions"
+import { createMessage } from "./utils/messageUtils"
+import { handleChatToolResponse } from "@/actions/chat-tool-handler"
 
 export function ChatInterface() {
-  const {
-    conversationHistory,
-    streamingMessageId,
-    sendMessage,
-    isLoading,
-    isStreaming,
-    error,
-  } = useChat()
+  const { mutate } = useHandleTodoRequest({
+    stream: false,
+    onFinalData: async (data) => {
+      if (data) {
+        const assistantMessage = createMessage("assistant", data.responseToUser)
+
+        setMessages((prev) => [...prev, assistantMessage])
+
+        if (data.action && data.action !== "chat") {
+          await handleChatToolResponse(data)
+        }
+      }
+    },
+  })
+
+  const [messages, setMessages] = useState<Message[]>([])
+
+  const handleSendMessage = async (inputValue: string) => {
+    try {
+      const userMessage: Message = createMessage("user", inputValue)
+
+      const todos = await getTodos()
+
+      setMessages((prev) => [...prev, userMessage])
+
+      await mutate(userMessage.content, todos, messages)
+    } catch (e) {
+      console.log(e)
+    }
+  }
 
   return (
     <Card className="flex flex-col h-[600px]">
@@ -22,7 +49,7 @@ export function ChatInterface() {
           AI Assistant
         </h2>
         <div className="text-sm text-muted-foreground">
-          {conversationHistory.length} messages
+          {messages.length} messages
         </div>
       </CardHeader>
 
@@ -34,20 +61,10 @@ export function ChatInterface() {
           aria-labelledby="chat-heading"
           aria-label="Chat conversation"
         >
-          <ChatMessages
-            conversationHistory={conversationHistory}
-            streamingMessageId={streamingMessageId}
-            isStreaming={isStreaming}
-            isLoading={isLoading}
-            error={error}
-          />
+          <ChatMessages messages={messages} />
         </div>
 
-        <ChatInput
-          onSendMessage={sendMessage}
-          disabled={isLoading}
-          placeholder="Ask me about your todos or productivity..."
-        />
+        <ChatInput onSendMessage={handleSendMessage} />
       </CardContent>
     </Card>
   )
