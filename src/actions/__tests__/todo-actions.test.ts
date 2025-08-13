@@ -6,7 +6,7 @@
  */
 
 import { addTodo, deleteTodo, toggleTodoComplete, updateTodo, getTodos, getTodoStats } from '../todo-actions'
-import { TodoFormData } from '@/types/todo'
+import { TodoFormData, Todo } from '@/types/todo'
 
 // Mock Next.js cache functions since they're server functions
 jest.mock('next/cache', () => ({
@@ -14,42 +14,45 @@ jest.mock('next/cache', () => ({
   unstable_cache: jest.fn((fn) => fn), // Pass through the function for testing
 }))
 
+// Mock fs.promises for in-memory testing
+let mockTodos: Todo[] = []
+
+jest.mock('fs', () => ({
+  promises: {
+    readFile: jest.fn().mockImplementation(() => {
+      return Promise.resolve(JSON.stringify(mockTodos))
+    }),
+    writeFile: jest.fn().mockImplementation((_, data) => {
+      mockTodos = JSON.parse(data)
+      return Promise.resolve()
+    }),
+    mkdir: jest.fn().mockResolvedValue(undefined)
+  }
+}))
+
 // Import the mocked function for testing
 import { revalidateTag } from 'next/cache'
-import { promises as fs } from 'fs'
-import path from 'path'
-
-const TODOS_FILE = path.join(process.cwd(), 'data', 'todos.json')
-const INITIAL_TEST_TODOS = [
-  {
-    id: '1',
-    name: 'Complete the project documentation',
-    category: 'Work',
-    priority: 'High Priority',
-    completed: false,
-  },
-  {
-    id: '2',
-    name: 'Review pull requests',
-    category: 'Development',
-    priority: 'Medium Priority',
-    completed: false,
-  },
-  {
-    id: '3',
-    name: 'Set up development environment',
-    category: 'Setup',
-    priority: 'High Priority',
-    completed: true,
-  },
-]
 
 describe('Todo Server Actions', () => {
-  beforeEach(async () => {
-    // Reset the todos file to initial state before each test
-    await fs.mkdir(path.dirname(TODOS_FILE), { recursive: true })
-    await fs.writeFile(TODOS_FILE, JSON.stringify(INITIAL_TEST_TODOS, null, 2), 'utf8')
+  beforeEach(() => {
     jest.clearAllMocks()
+    // Reset mock todos to initial test state
+    mockTodos = [
+      {
+        id: 'test-todo-1',
+        name: 'Test Todo 1',
+        category: 'Testing',
+        priority: 'High Priority',
+        completed: false
+      },
+      {
+        id: 'test-todo-2', 
+        name: 'Test Todo 2',
+        category: 'Testing',
+        priority: 'Medium Priority',
+        completed: true
+      }
+    ]
   })
 
   describe('getTodos', () => {
