@@ -11,12 +11,17 @@ import { createMessage } from "./utils/messageUtils"
 import { handleChatToolResponse } from "@/actions/chat-tool-handler"
 
 export function ChatInterface() {
-  const { mutate } = useHandleTodoRequest({
-    stream: false,
+  const [messages, setMessages] = useState<Message[]>([])
+
+  const { mutate, data, reset } = useHandleTodoRequest({
+    stream: true,
     onFinalData: async (data) => {
       if (data) {
+        // Clear streaming data first to prevent flash of duplicate messages
+        reset()
+        
+        // Add final assistant message to history
         const assistantMessage = createMessage("assistant", data.responseToUser)
-
         setMessages((prev) => [...prev, assistantMessage])
 
         if (data.action && data.action !== "chat") {
@@ -26,14 +31,12 @@ export function ChatInterface() {
     },
   })
 
-  const [messages, setMessages] = useState<Message[]>([])
-
   const handleSendMessage = async (inputValue: string) => {
     try {
       const userMessage: Message = createMessage("user", inputValue)
-
       const todos = await getTodos()
 
+      // Add user message immediately
       setMessages((prev) => [...prev, userMessage])
 
       await mutate(userMessage.content, todos, messages)
@@ -49,7 +52,7 @@ export function ChatInterface() {
           AI Assistant
         </h2>
         <div className="text-sm text-muted-foreground">
-          {messages.length} messages
+          {messages.length + (data ? 1 : 0)} messages
         </div>
       </CardHeader>
 
@@ -61,7 +64,15 @@ export function ChatInterface() {
           aria-labelledby="chat-heading"
           aria-label="Chat conversation"
         >
-          <ChatMessages messages={messages} />
+          <ChatMessages
+            messages={[
+              ...messages,
+              // Show current streaming response if available
+              ...(data
+                ? [createMessage("assistant", data.responseToUser)]
+                : []),
+            ]}
+          />
         </div>
 
         <ChatInput onSendMessage={handleSendMessage} />

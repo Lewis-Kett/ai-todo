@@ -80,11 +80,11 @@ describe('ChatInterface with BAML Integration', () => {
   })
 
 
-  it('configures BAML hook without streaming', () => {
+  it('configures BAML hook with streaming', () => {
     render(<ChatInterface />)
     
     expect(mockUseHandleTodoRequest).toHaveBeenCalledWith({
-      stream: false,
+      stream: true,
       onFinalData: expect.any(Function)
     })
   })
