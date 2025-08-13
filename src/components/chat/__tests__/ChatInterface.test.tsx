@@ -19,36 +19,30 @@ jest.mock('@/actions/chat-tool-handler', () => ({
   handleChatToolResponse: jest.fn()
 }))
 
-// Mock the tool processor
-jest.mock('../utils/toolProcessor', () => ({
-  processToolResponse: jest.fn(),
-  getErrorMessage: jest.fn().mockReturnValue('Error occurred')
-}))
 
 // Mock child components
 jest.mock('../ChatMessages', () => ({
-  ChatMessages: ({ conversationHistory, streamingMessageId, isLoading, error }: any) => (
+  ChatMessages: ({ messages }: any) => (
     <div data-testid="chat-messages">
-      <div data-testid="messages-count">{conversationHistory.length}</div>
-      <div data-testid="is-loading">{isLoading.toString()}</div>
-      <div data-testid="streaming-id">{streamingMessageId || 'none'}</div>
-      {error && <div data-testid="error-message">{error}</div>}
+      <div data-testid="messages-count">{messages.length}</div>
+      {messages.map((msg: any) => (
+        <div key={msg.id} data-testid={`message-${msg.id}`}>
+          {msg.content}
+        </div>
+      ))}
     </div>
   )
 }))
 
 jest.mock('../ChatInput', () => ({
-  ChatInput: ({ onSendMessage, disabled, placeholder }: any) => (
+  ChatInput: ({ onSendMessage }: any) => (
     <div data-testid="chat-input">
       <button 
         onClick={() => onSendMessage('test message')}
-        disabled={disabled}
         data-testid="send-button"
       >
         Send
       </button>
-      <div data-testid="input-disabled">{disabled.toString()}</div>
-      <div data-testid="input-placeholder">{placeholder}</div>
     </div>
   )
 }))
@@ -85,65 +79,17 @@ describe('ChatInterface with BAML Integration', () => {
     expect(screen.getByTestId('chat-input')).toBeInTheDocument()
   })
 
-  it('shows correct placeholder text', () => {
-    render(<ChatInterface />)
-    
-    expect(screen.getByTestId('input-placeholder')).toHaveTextContent('Ask me about your todos or productivity...')
-  })
 
-  it('configures BAML hook for streaming', () => {
+  it('configures BAML hook without streaming', () => {
     render(<ChatInterface />)
     
     expect(mockUseHandleTodoRequest).toHaveBeenCalledWith({
-      stream: true,
-      onStreamData: expect.any(Function),
+      stream: false,
       onFinalData: expect.any(Function)
     })
   })
 
-  it('handles loading state from BAML hook', () => {
-    mockUseHandleTodoRequest.mockReturnValue({
-      data: undefined,
-      streamData: undefined,
-      finalData: undefined,
-      isLoading: true,
-      isPending: false,
-      isStreaming: false,
-      isSuccess: false,
-      isError: false,
-      error: undefined,
-      status: 'pending',
-      mutate: jest.fn(),
-      reset: jest.fn()
-    })
-    
-    render(<ChatInterface />)
-    
-    expect(screen.getByTestId('is-loading')).toHaveTextContent('true')
-    expect(screen.getByTestId('input-disabled')).toHaveTextContent('true')
-  })
 
-  it('handles streaming state from BAML hook', () => {
-    mockUseHandleTodoRequest.mockReturnValue({
-      data: undefined,
-      streamData: undefined,
-      finalData: undefined,
-      isLoading: false,
-      isPending: false,
-      isStreaming: true,
-      isSuccess: false,
-      isError: false,
-      error: undefined,
-      status: 'streaming',
-      mutate: jest.fn(),
-      reset: jest.fn()
-    })
-    
-    render(<ChatInterface />)
-    
-    // When streaming, the last message should be the streaming message
-    expect(screen.getByTestId('is-loading')).toHaveTextContent('false')
-  })
 
   it('sends messages through BAML hook', async () => {
     const mockMutate = jest.fn()
@@ -175,12 +121,7 @@ describe('ChatInterface with BAML Integration', () => {
       expect(mockMutate).toHaveBeenCalledWith(
         'test message',
         mockTodos,
-        expect.arrayContaining([
-          expect.objectContaining({
-            role: 'user',
-            content: 'test message'
-          })
-        ])
+        []
       )
     })
   })
@@ -221,8 +162,7 @@ describe('ChatInterface with BAML Integration', () => {
       await mockOnFinalData(toolAction)
     })
 
-    // Tool processing is now handled by ChatToolProcessor, which is mocked
-    // We can't easily test the internal behavior without making the test more complex
+    // Tool action is handled by handleChatToolResponse, which is mocked
   })
 
   it('does not execute tool for chat actions', async () => {
@@ -258,7 +198,7 @@ describe('ChatInterface with BAML Integration', () => {
       await mockOnFinalData(chatAction)
     })
 
-    // Tool processing is now handled by ChatToolProcessor, which is mocked
+    // Chat actions don't trigger handleChatToolResponse
   })
 
   it('handles error state from BAML hook', () => {

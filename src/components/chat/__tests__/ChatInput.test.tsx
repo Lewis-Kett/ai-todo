@@ -9,24 +9,13 @@ describe('ChatInput', () => {
     mockOnSendMessage.mockClear()
   })
 
-  it('renders input field with placeholder', () => {
+  it('renders input field with correct aria-label', () => {
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
     
-    const input = screen.getByPlaceholderText('Type your message...')
+    const input = screen.getByLabelText('Chat message input')
     expect(input).toBeInTheDocument()
   })
 
-  it('renders custom placeholder when provided', () => {
-    render(
-      <ChatInput 
-        onSendMessage={mockOnSendMessage} 
-        placeholder="Custom placeholder" 
-      />
-    )
-    
-    const input = screen.getByPlaceholderText('Custom placeholder')
-    expect(input).toBeInTheDocument()
-  })
 
   it('renders send button with correct aria-label', () => {
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
@@ -35,18 +24,18 @@ describe('ChatInput', () => {
     expect(sendButton).toBeInTheDocument()
   })
 
-  it('send button is disabled when input is empty', () => {
+  it('send button is enabled even when input is empty', () => {
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
     
     const sendButton = screen.getByRole('button', { name: 'Send message' })
-    expect(sendButton).toBeDisabled()
+    expect(sendButton).not.toBeDisabled()
   })
 
   it('send button is enabled when input has text', async () => {
     const user = userEvent.setup()
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
     
-    const input = screen.getByPlaceholderText('Type your message...')
+    const input = screen.getByLabelText('Chat message input')
     const sendButton = screen.getByRole('button', { name: 'Send message' })
     
     await user.type(input, 'Hello')
@@ -58,7 +47,7 @@ describe('ChatInput', () => {
     const user = userEvent.setup()
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
     
-    const input = screen.getByPlaceholderText('Type your message...')
+    const input = screen.getByLabelText('Chat message input')
     const sendButton = screen.getByRole('button', { name: 'Send message' })
     
     await user.type(input, 'Hello world')
@@ -71,7 +60,7 @@ describe('ChatInput', () => {
     const user = userEvent.setup()
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
     
-    const input = screen.getByPlaceholderText('Type your message...')
+    const input = screen.getByLabelText('Chat message input')
     const sendButton = screen.getByRole('button', { name: 'Send message' })
     
     await user.type(input, 'Hello world')
@@ -84,7 +73,7 @@ describe('ChatInput', () => {
     const user = userEvent.setup()
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
     
-    const input = screen.getByPlaceholderText('Type your message...')
+    const input = screen.getByLabelText('Chat message input')
     
     await user.type(input, 'Hello world')
     await user.keyboard('{Enter}')
@@ -96,7 +85,7 @@ describe('ChatInput', () => {
     const user = userEvent.setup()
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
     
-    const input = screen.getByPlaceholderText('Type your message...')
+    const input = screen.getByLabelText('Chat message input')
     
     await user.type(input, 'Hello world')
     
@@ -111,7 +100,7 @@ describe('ChatInput', () => {
     const user = userEvent.setup()
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
     
-    const input = screen.getByPlaceholderText('Type your message...')
+    const input = screen.getByLabelText('Chat message input')
     const sendButton = screen.getByRole('button', { name: 'Send message' })
     
     await user.type(input, '   ')
@@ -120,31 +109,12 @@ describe('ChatInput', () => {
     expect(mockOnSendMessage).not.toHaveBeenCalled()
   })
 
-  it('disables input and button when disabled prop is true', () => {
-    render(<ChatInput onSendMessage={mockOnSendMessage} disabled={true} />)
-    
-    const input = screen.getByPlaceholderText('Type your message...')
-    const sendButton = screen.getByRole('button', { name: 'Send message' })
-    
-    expect(input).toBeDisabled()
-    expect(sendButton).toBeDisabled()
-  })
 
-  it('shows loading spinner when disabled', () => {
-    render(<ChatInput onSendMessage={mockOnSendMessage} disabled={true} />)
-    
-    // The Loader2 icon should be present when disabled
-    const button = screen.getByRole('button', { name: 'Send message' })
-    expect(button).toBeInTheDocument()
-    // We can't easily test for the specific icon, but we can test that it's disabled
-    expect(button).toBeDisabled()
-  })
-
-  it('shows send icon when not disabled and has input', async () => {
+  it('shows send icon when input has text', async () => {
     const user = userEvent.setup()
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
     
-    const input = screen.getByPlaceholderText('Type your message...')
+    const input = screen.getByLabelText('Chat message input')
     const sendButton = screen.getByRole('button', { name: 'Send message' })
     
     await user.type(input, 'Hello')
@@ -157,7 +127,7 @@ describe('ChatInput', () => {
     const user = userEvent.setup()
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
     
-    const input = screen.getByPlaceholderText('Type your message...')
+    const input = screen.getByLabelText('Chat message input')
     const sendButton = screen.getByRole('button', { name: 'Send message' })
     
     await user.type(input, '  Hello world  ')

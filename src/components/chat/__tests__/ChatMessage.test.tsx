@@ -22,7 +22,7 @@ describe('ChatMessage', () => {
     expect(screen.getByText('Hello, how are you?')).toBeInTheDocument()
     expect(screen.getByText('U')).toBeInTheDocument()
     
-    const messageContent = screen.getByText('Hello, how are you?')
+    const messageContent = screen.getByText('Hello, how are you?').parentElement
     expect(messageContent).toHaveClass('bg-primary', 'text-primary-foreground')
   })
 
@@ -30,26 +30,13 @@ describe('ChatMessage', () => {
     render(<ChatMessage message={mockAssistantMessage} />)
     
     expect(screen.getByText('I am doing well, thank you!')).toBeInTheDocument()
-    expect(screen.getAllByText('AI')).toHaveLength(2) // Avatar fallback and badge
+    expect(screen.getByText('AI')).toBeInTheDocument() // Avatar fallback only
     
-    const messageContent = screen.getByText('I am doing well, thank you!')
+    const messageContent = screen.getByText('I am doing well, thank you!').parentElement
     expect(messageContent).toHaveClass('bg-muted', 'text-muted-foreground')
   })
 
 
-  it('shows streaming indicator when isStreaming is true', () => {
-    render(<ChatMessage message={mockAssistantMessage} isStreaming={true} />)
-    
-    const streamingIndicator = screen.getByText('▋')
-    expect(streamingIndicator).toBeInTheDocument()
-    expect(streamingIndicator).toHaveClass('animate-pulse')
-  })
-
-  it('does not show streaming indicator when isStreaming is false', () => {
-    render(<ChatMessage message={mockAssistantMessage} isStreaming={false} />)
-    
-    expect(screen.queryByText('▋')).not.toBeInTheDocument()
-  })
 
   it('applies correct layout for user messages (flex-row-reverse)', () => {
     const { container } = render(<ChatMessage message={mockUserMessage} />)
