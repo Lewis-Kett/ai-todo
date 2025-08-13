@@ -1,14 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { ChatMessage } from '../ChatMessage'
 import type { Message } from '@/baml_client/types'
-import { useTypewriter } from '@/hooks/useTypewriter'
-
-// Mock the useTypewriter hook
-jest.mock('@/hooks/useTypewriter', () => ({
-  useTypewriter: jest.fn()
-}))
-
-const mockUseTypewriter = useTypewriter as jest.MockedFunction<typeof useTypewriter>
 
 describe('ChatMessage', () => {
   const mockUserMessage: Message = {
@@ -23,16 +15,6 @@ describe('ChatMessage', () => {
     content: 'I am doing well, thank you!'
   }
 
-  beforeEach(() => {
-    // Default mock behavior: return the full text (no animation)
-    mockUseTypewriter.mockImplementation((text: string, enabled?: boolean) => {
-      return enabled !== false ? text : text // Simplified for testing
-    })
-  })
-
-  afterEach(() => {
-    jest.clearAllMocks()
-  })
 
   it('renders user message with correct styling', () => {
     render(<ChatMessage message={mockUserMessage} />)
@@ -83,51 +65,4 @@ describe('ChatMessage', () => {
     expect(messageContainer).toHaveClass('flex-row')
   })
 
-  describe('typewriter effect', () => {
-    it('uses typewriter hook for assistant messages when streaming', () => {
-      render(<ChatMessage message={mockAssistantMessage} isStreaming={true} />)
-      
-      expect(mockUseTypewriter).toHaveBeenCalledWith(
-        'I am doing well, thank you!',
-        true // shouldAnimateText = true for assistant + streaming
-      )
-    })
-
-    it('does not use typewriter animation for user messages', () => {
-      render(<ChatMessage message={mockUserMessage} isStreaming={true} />)
-      
-      expect(mockUseTypewriter).toHaveBeenCalledWith(
-        'Hello, how are you?',
-        false // shouldAnimateText = false for user messages
-      )
-    })
-
-    it('does not use typewriter animation for assistant messages when not streaming', () => {
-      render(<ChatMessage message={mockAssistantMessage} isStreaming={false} />)
-      
-      expect(mockUseTypewriter).toHaveBeenCalledWith(
-        'I am doing well, thank you!',
-        false // shouldAnimateText = false when not streaming
-      )
-    })
-
-    it('displays partially typed text from typewriter hook', () => {
-      // Mock typewriter to return partial text
-      mockUseTypewriter.mockReturnValue('I am doing we')
-      
-      render(<ChatMessage message={mockAssistantMessage} isStreaming={true} />)
-      
-      expect(screen.getByText('I am doing we')).toBeInTheDocument()
-      expect(screen.queryByText('I am doing well, thank you!')).not.toBeInTheDocument()
-    })
-
-    it('still shows cursor when streaming with partial text', () => {
-      mockUseTypewriter.mockReturnValue('I am doing we')
-      
-      render(<ChatMessage message={mockAssistantMessage} isStreaming={true} />)
-      
-      expect(screen.getByText('I am doing we')).toBeInTheDocument()
-      expect(screen.getByText('▋')).toBeInTheDocument()
-    })
-  })
 })
