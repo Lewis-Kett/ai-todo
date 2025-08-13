@@ -57,6 +57,7 @@ client<llm> GPT4 {
     api_key env.OPENAI_API_KEY
     max_tokens 1000
     temperature 0.7
+    supports_streaming true
   }
 }
 
