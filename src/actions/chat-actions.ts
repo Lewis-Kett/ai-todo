@@ -3,17 +3,7 @@
 import { Todo } from "@/types/todo"
 import { Message } from "@/baml_client/types"
 import { b } from "@/baml_client"
-import {
-  getTodosFromFile,
-  setTodosInFile,
-  revalidateTodos,
-} from "@/lib/todo-data"
-import {
-  addTodoToArray,
-  deleteTodoFromArray,
-  toggleTodoInArray,
-  updateTodoInArray,
-} from "@/lib/todo-operations"
+import { getTodos, addTodo, deleteTodo, toggleTodoComplete, updateTodo } from "./todo-actions"
 
 export interface ChatResponse {
   message: string
@@ -21,17 +11,17 @@ export interface ChatResponse {
 }
 
 /**
- * Processes a chat message and handles both chat and todo operations atomically.
- * This function consolidates all todo operations to eliminate race conditions
- * and provides a single cache invalidation point for better performance.
+ * Processes a chat message and handles both chat and todo operations.
+ * This function delegates todo operations to existing server actions
+ * to maintain consistency and eliminate code duplication.
  */
 export async function processChatMessage(
   userMessage: string,
   conversationHistory: Message[]
 ): Promise<ChatResponse> {
   try {
-    // 1. Get current todos - fresh read bypassing cache
-    const todos = await getTodosFromFile()
+    // 1. Get current todos
+    const todos = await getTodos()
 
     // 2. Call BAML function
     const response = await b.HandleTodoRequest(
@@ -40,28 +30,22 @@ export async function processChatMessage(
       conversationHistory
     )
 
-    // 3. Process todo operations atomically
-    let updatedTodos = [...todos]
-    let todoModified = false
-
+    // 3. Process todo operations using existing server actions
     switch (response.action) {
       case "add_todo":
-        updatedTodos = addTodoToArray(updatedTodos, {
+        await addTodo({
           name: response.name,
           category: response.category,
           priority: response.priority,
         })
-        todoModified = true
         break
 
       case "delete_todo":
-        updatedTodos = deleteTodoFromArray(updatedTodos, response.id)
-        todoModified = true
+        await deleteTodo(response.id)
         break
 
       case "toggle_todo":
-        updatedTodos = toggleTodoInArray(updatedTodos, response.id)
-        todoModified = true
+        await toggleTodoComplete(response.id)
         break
 
       case "update_todo":
@@ -70,8 +54,7 @@ export async function processChatMessage(
         if (response.category) updates.category = response.category
         if (response.priority) updates.priority = response.priority
 
-        updatedTodos = updateTodoInArray(updatedTodos, response.id, updates)
-        todoModified = true
+        await updateTodo(response.id, updates)
         break
 
       case "chat":
@@ -79,13 +62,7 @@ export async function processChatMessage(
         break
     }
 
-    // 4. Save and invalidate cache ONCE
-    if (todoModified) {
-      await setTodosInFile(updatedTodos)
-      revalidateTodos() // Single invalidation
-    }
-
-    // 5. Return comprehensive response
+    // 4. Return response
     return {
       message: response.responseToUser,
       success: true,

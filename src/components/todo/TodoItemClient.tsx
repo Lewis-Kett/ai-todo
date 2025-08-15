@@ -15,6 +15,7 @@ interface TodoItemClientProps {
 }
 
 export function TodoItemClient({ todo }: TodoItemClientProps) {
+  //todo wrap this guy in custom hook
   const [optimisticTodo, updateOptimisticTodo] = useOptimistic(
     { ...todo, deleting: false },
     (state: Todo & { deleting: boolean }, update: Partial<Todo & { deleting: boolean }>) => ({ ...state, ...update })
@@ -24,6 +25,7 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
   const priorities: TodoPriority[] = ['High Priority', 'Medium Priority', 'Low Priority']
   
   const priorityVariant = optimisticTodo.completed ? "outline" : "outline"
+  
   const priorityText = optimisticTodo.completed ? "Completed" : optimisticTodo.priority
 
   const nameEdit = useInlineEdit(optimisticTodo.name, (name) => {

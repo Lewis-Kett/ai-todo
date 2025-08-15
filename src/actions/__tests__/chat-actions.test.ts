@@ -6,20 +6,37 @@ import { Todo } from '@/types/todo'
 // Mock shared data layer
 let mockTodos: Todo[] = []
 
-jest.mock('@/lib/todo-data', () => ({
-  getTodosFromFile: jest.fn().mockImplementation(() => Promise.resolve([...mockTodos])),
-  setTodosInFile: jest.fn().mockImplementation((todos: Todo[]) => {
-    mockTodos = [...todos]
+// Mock todo-actions to simulate the server actions
+jest.mock('../todo-actions', () => ({
+  getTodos: jest.fn().mockImplementation(() => Promise.resolve([...mockTodos])),
+  addTodo: jest.fn().mockImplementation((formData) => {
+    const newTodo: Todo = {
+      id: 'test-uuid-123',
+      name: formData.name,
+      category: formData.category,
+      priority: formData.priority,
+      completed: false
+    }
+    mockTodos = [...mockTodos, newTodo]
     return Promise.resolve()
   }),
-  revalidateTodos: jest.fn()
+  deleteTodo: jest.fn().mockImplementation((id) => {
+    mockTodos = mockTodos.filter(todo => todo.id !== id)
+    return Promise.resolve()
+  }),
+  toggleTodoComplete: jest.fn().mockImplementation((id) => {
+    mockTodos = mockTodos.map(todo =>
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+    )
+    return Promise.resolve()
+  }),
+  updateTodo: jest.fn().mockImplementation((id, updates) => {
+    mockTodos = mockTodos.map(todo =>
+      todo.id === id ? { ...todo, ...updates } : todo
+    )
+    return Promise.resolve()
+  })
 }))
-
-// Mock shared operations - pass through to actual implementations for testing
-jest.mock('@/lib/todo-operations', () => {
-  const actual = jest.requireActual('@/lib/todo-operations')
-  return actual
-})
 
 // BAML client is mocked globally in __mocks__/@/baml_client.js
 
@@ -32,11 +49,13 @@ Object.defineProperty(global, 'crypto', {
 })
 
 // Import mocked functions
-import { getTodosFromFile, setTodosInFile, revalidateTodos } from '@/lib/todo-data'
+import { getTodos, addTodo, deleteTodo, toggleTodoComplete, updateTodo } from '../todo-actions'
 
-const mockGetTodos = getTodosFromFile as jest.MockedFunction<typeof getTodosFromFile>
-const mockSetTodos = setTodosInFile as jest.MockedFunction<typeof setTodosInFile>
-const mockRevalidateTodos = revalidateTodos as jest.MockedFunction<typeof revalidateTodos>
+const mockGetTodos = getTodos as jest.MockedFunction<typeof getTodos>
+const mockAddTodo = addTodo as jest.MockedFunction<typeof addTodo>
+const mockDeleteTodo = deleteTodo as jest.MockedFunction<typeof deleteTodo>
+const mockToggleTodo = toggleTodoComplete as jest.MockedFunction<typeof toggleTodoComplete>
+const mockUpdateTodo = updateTodo as jest.MockedFunction<typeof updateTodo>
 const mockBAML = b.HandleTodoRequest as jest.MockedFunction<typeof b.HandleTodoRequest>
 
 describe('processChatMessage', () => {
@@ -47,9 +66,43 @@ describe('processChatMessage', () => {
     mockTodos = [
       { id: '1', name: 'Existing task', category: 'Work', priority: 'High Priority', completed: false }
     ]
+    // Reset mock implementations
+    mockGetTodos.mockImplementation(() => Promise.resolve([...mockTodos]))
+    mockAddTodo.mockImplementation((formData) => {
+      const newTodo: Todo = {
+        id: 'test-uuid-123',
+        name: formData.name,
+        category: formData.category,
+        priority: formData.priority,
+        completed: false
+      }
+      mockTodos = [...mockTodos, newTodo]
+      return Promise.resolve()
+    })
+    mockDeleteTodo.mockImplementation((id) => {
+      mockTodos = mockTodos.filter(todo => todo.id !== id)
+      return Promise.resolve()
+    })
+    mockToggleTodo.mockImplementation((id) => {
+      mockTodos = mockTodos.map(todo =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      )
+      return Promise.resolve()
+    })
+    mockUpdateTodo.mockImplementation((id, updates) => {
+      mockTodos = mockTodos.map(todo =>
+        todo.id === id ? { ...todo, ...updates } : todo
+      )
+      return Promise.resolve()
+    })
   })
 
   describe('atomic operations', () => {
+    beforeEach(() => {
+      // Clear all mocks before each test in this describe block
+      jest.clearAllMocks()
+    })
+
     it('should perform atomic add_todo operation with single revalidation', async () => {
       // Mock BAML response
       mockBAML.mockResolvedValueOnce({
@@ -63,10 +116,13 @@ describe('processChatMessage', () => {
       const messages: Message[] = []
       const result = await processChatMessage('Add a new task', messages)
 
-      // Verify atomic operation: read -> process -> write -> single revalidate
+      // Verify operations were called
       expect(mockGetTodos).toHaveBeenCalledTimes(1)
-      expect(mockSetTodos).toHaveBeenCalledTimes(1)
-      expect(mockRevalidateTodos).toHaveBeenCalledTimes(1)
+      expect(mockAddTodo).toHaveBeenCalledWith({
+        name: 'New task',
+        category: 'Personal',
+        priority: 'Medium Priority'
+      })
 
       // Verify the new todo was added
       expect(mockTodos).toHaveLength(2)
@@ -80,8 +136,7 @@ describe('processChatMessage', () => {
 
       expect(result).toEqual({
         message: 'Added your task!',
-        success: true,
-        updatedTodos: mockTodos
+        success: true
       })
     })
 
@@ -103,9 +158,8 @@ describe('processChatMessage', () => {
       expect(mockTodos).toHaveLength(1)
       expect(mockTodos[0].id).toBe('2')
 
-      expect(mockRevalidateTodos).toHaveBeenCalledTimes(1)
+      expect(mockDeleteTodo).toHaveBeenCalledWith('1')
       expect(result.success).toBe(true)
-      expect(result.updatedTodos).toEqual(mockTodos)
     })
 
     it('should perform atomic toggle_todo operation', async () => {
@@ -124,7 +178,7 @@ describe('processChatMessage', () => {
 
       expect(mockTodos[0].completed).toBe(true)
 
-      expect(mockRevalidateTodos).toHaveBeenCalledTimes(1)
+      expect(mockToggleTodo).toHaveBeenCalledWith('1')
       expect(result.success).toBe(true)
     })
 
@@ -153,7 +207,11 @@ describe('processChatMessage', () => {
         completed: false
       })
 
-      expect(mockRevalidateTodos).toHaveBeenCalledTimes(1)
+      expect(mockUpdateTodo).toHaveBeenCalledWith('1', {
+        name: 'New name',
+        category: 'New category',
+        priority: 'High Priority'
+      })
       expect(result.success).toBe(true)
     })
   })
@@ -170,15 +228,16 @@ describe('processChatMessage', () => {
 
       const result = await processChatMessage('Give me advice', [])
 
-      // File should be read initially, but no write should occur for chat
+      // File should be read initially, but no todo operations should occur for chat
       expect(mockGetTodos).toHaveBeenCalledTimes(1)
-      expect(mockSetTodos).not.toHaveBeenCalled()
-      expect(mockRevalidateTodos).not.toHaveBeenCalled()
+      expect(mockAddTodo).not.toHaveBeenCalled()
+      expect(mockDeleteTodo).not.toHaveBeenCalled()
+      expect(mockToggleTodo).not.toHaveBeenCalled()
+      expect(mockUpdateTodo).not.toHaveBeenCalled()
 
       expect(result).toEqual({
         message: 'Here is some advice...',
-        success: true,
-        updatedTodos: undefined
+        success: true
       })
     })
   })
@@ -195,9 +254,11 @@ describe('processChatMessage', () => {
         success: false
       })
 
-      // Should not have called file operations after error
-      expect(mockSetTodos).not.toHaveBeenCalled()
-      expect(mockRevalidateTodos).not.toHaveBeenCalled()
+      // Should not have called any todo operations after error
+      expect(mockAddTodo).not.toHaveBeenCalled()
+      expect(mockDeleteTodo).not.toHaveBeenCalled()
+      expect(mockToggleTodo).not.toHaveBeenCalled()
+      expect(mockUpdateTodo).not.toHaveBeenCalled()
     })
 
     it('should handle file read errors by starting with empty array', async () => {
@@ -222,10 +283,22 @@ describe('processChatMessage', () => {
     })
   })
 
-  describe('single cache invalidation', () => {
-    it('should only call revalidateTodos once per operation', async () => {
+  describe('server action delegation', () => {
+    beforeEach(() => {
+      // Ensure complete isolation for this test suite
+      jest.resetAllMocks()
+      jest.clearAllMocks()
       mockTodos = []
+      
+      // Re-setup the mocks completely fresh
+      mockGetTodos.mockImplementation(() => Promise.resolve([]))
+      mockAddTodo.mockImplementation(() => Promise.resolve())
+      mockDeleteTodo.mockImplementation(() => Promise.resolve())
+      mockToggleTodo.mockImplementation(() => Promise.resolve())
+      mockUpdateTodo.mockImplementation(() => Promise.resolve())
+    })
 
+    it('should delegate to appropriate server action', async () => {
       mockBAML.mockResolvedValueOnce({
         action: 'add_todo',
         name: 'Test task',
@@ -236,8 +309,13 @@ describe('processChatMessage', () => {
 
       await processChatMessage('Add task', [])
 
-      // Verify single cache invalidation
-      expect(mockRevalidateTodos).toHaveBeenCalledTimes(1)
+      // Verify server action was called
+      expect(mockAddTodo).toHaveBeenCalledTimes(1)
+      expect(mockAddTodo).toHaveBeenCalledWith({
+        name: 'Test task',
+        category: 'Test',
+        priority: 'Low Priority'
+      })
     })
   })
 
