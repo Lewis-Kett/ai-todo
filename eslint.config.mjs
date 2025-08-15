@@ -12,6 +12,7 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
+    files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       parserOptions: {
         project: "./tsconfig.json",
@@ -25,6 +26,13 @@ const eslintConfig = [
       "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/explicit-module-boundary-types": "off",
       "@typescript-eslint/no-inferrable-types": "off",
+    },
+  },
+  {
+    files: ["**/*.js", "**/*.mjs"],
+    rules: {
+      // Allow require() in JavaScript files
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
   {

@@ -24,11 +24,11 @@ describe('ChatInput', () => {
     expect(sendButton).toBeInTheDocument()
   })
 
-  it('send button is enabled even when input is empty', () => {
+  it('send button is disabled when input is empty', () => {
     render(<ChatInput onSendMessage={mockOnSendMessage} />)
     
     const sendButton = screen.getByRole('button', { name: 'Send message' })
-    expect(sendButton).not.toBeDisabled()
+    expect(sendButton).toBeDisabled()
   })
 
   it('send button is enabled when input has text', async () => {
@@ -134,5 +134,35 @@ describe('ChatInput', () => {
     await user.click(sendButton)
     
     expect(mockOnSendMessage).toHaveBeenCalledWith('Hello world')
+  })
+
+  it('disables input and button when disabled prop is true', () => {
+    render(<ChatInput onSendMessage={mockOnSendMessage} disabled={true} />)
+    
+    const input = screen.getByLabelText('Chat message input')
+    const sendButton = screen.getByRole('button', { name: 'Send message' })
+    
+    expect(input).toBeDisabled()
+    expect(sendButton).toBeDisabled()
+    expect(input).toHaveAttribute('placeholder', 'AI is processing...')
+  })
+
+  it('shows normal placeholder when not disabled', () => {
+    render(<ChatInput onSendMessage={mockOnSendMessage} disabled={false} />)
+    
+    const input = screen.getByLabelText('Chat message input')
+    expect(input).toHaveAttribute('placeholder', 'Type your message...')
+  })
+
+  it('does not send message when disabled', async () => {
+    const user = userEvent.setup()
+    render(<ChatInput onSendMessage={mockOnSendMessage} disabled={true} />)
+    
+    const sendButton = screen.getByRole('button', { name: 'Send message' })
+    
+    // Try to interact with disabled components
+    await user.click(sendButton)
+    
+    expect(mockOnSendMessage).not.toHaveBeenCalled()
   })
 })

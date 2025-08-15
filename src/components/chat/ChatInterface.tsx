@@ -3,45 +3,43 @@
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { ChatMessages } from "./ChatMessages"
 import { ChatInput } from "./ChatInput"
-import { useHandleTodoRequest } from "@/baml_client/react/hooks"
 import { useState } from "react"
 import { Message } from "@/baml_client/types"
-import { getTodos } from "@/actions/todo-actions"
 import { createMessage } from "./utils/messageUtils"
-import { handleChatToolResponse } from "@/actions/chat-tool-handler"
+import { processChatMessage } from "@/actions/chat-actions"
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
-  const { mutate, data, reset } = useHandleTodoRequest({
-    stream: true,
-    onFinalData: async (data) => {
-      if (data) {
-        // Clear streaming data first to prevent flash of duplicate messages
-        reset()
-        
-        // Add final assistant message to history
-        const assistantMessage = createMessage("assistant", data.responseToUser)
-        setMessages((prev) => [...prev, assistantMessage])
-
-        if (data.action && data.action !== "chat") {
-          handleChatToolResponse(data)
-        }
-      }
-    },
-  })
-
+  //TODO Wrap this guy in a custom hook
   const handleSendMessage = async (inputValue: string) => {
     try {
+      setIsLoading(true)
+      
       const userMessage: Message = createMessage("user", inputValue)
-      const todos = await getTodos()
-
       // Add user message immediately
       setMessages((prev) => [...prev, userMessage])
 
-      await mutate(userMessage.content, todos, messages)
-    } catch (e) {
-      console.log(e)
+      // Call server action directly
+      const response = await processChatMessage(inputValue, messages)
+      
+      // Add assistant response
+      if (response.success) {
+        const assistantMessage = createMessage("assistant", response.message)
+        setMessages(prev => [...prev, assistantMessage])
+      } else {
+        // Handle error case
+        const errorMessage = createMessage("assistant", response.message || "Sorry, I encountered an error processing your request.")
+        setMessages(prev => [...prev, errorMessage])
+      }
+    } catch (error) {
+      console.error("Error processing message:", error)
+      // Add error message to chat
+      const errorMessage = createMessage("assistant", "Sorry, I encountered an unexpected error. Please try again.")
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -52,7 +50,7 @@ export function ChatInterface() {
           AI Assistant
         </h2>
         <div className="text-sm text-muted-foreground">
-          {messages.length + (data ? 1 : 0)} messages
+          {messages.length} messages
         </div>
       </CardHeader>
 
@@ -65,17 +63,12 @@ export function ChatInterface() {
           aria-label="Chat conversation"
         >
           <ChatMessages
-            messages={[
-              ...messages,
-              // Show current streaming response if available
-              ...(data
-                ? [createMessage("assistant", data.responseToUser)]
-                : []),
-            ]}
+            messages={messages}
+            isLoading={isLoading}
           />
         </div>
 
-        <ChatInput onSendMessage={handleSendMessage} />
+        <ChatInput onSendMessage={handleSendMessage} disabled={isLoading} />
       </CardContent>
     </Card>
   )

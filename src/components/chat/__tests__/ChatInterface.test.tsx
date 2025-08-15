@@ -1,30 +1,18 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ChatInterface } from '../ChatInterface'
-import { useHandleTodoRequest } from '@/baml_client/react/hooks'
-import type { BamlErrors } from '@boundaryml/baml/errors'
-import { getTodos } from '@/actions/todo-actions'
+import { processChatMessage } from '@/actions/chat-actions'
 
-// Mock the BAML hook
-jest.mock('@/baml_client/react/hooks', () => ({
-  useHandleTodoRequest: jest.fn()
+// Mock the server action
+jest.mock('@/actions/chat-actions', () => ({
+  processChatMessage: jest.fn()
 }))
-
-// Mock todo actions
-jest.mock('@/actions/todo-actions', () => ({
-  getTodos: jest.fn()
-}))
-
-// Mock chat tool handler
-jest.mock('@/actions/chat-tool-handler', () => ({
-  handleChatToolResponse: jest.fn()
-}))
-
 
 // Mock child components
 jest.mock('../ChatMessages', () => ({
-  ChatMessages: ({ messages }: any) => (
+  ChatMessages: ({ messages, isLoading }: any) => (
     <div data-testid="chat-messages">
       <div data-testid="messages-count">{messages.length}</div>
+      {isLoading && <div data-testid="loading-indicator">Loading...</div>}
       {messages.map((msg: any) => (
         <div key={msg.id} data-testid={`message-${msg.id}`}>
           {msg.content}
@@ -35,39 +23,25 @@ jest.mock('../ChatMessages', () => ({
 }))
 
 jest.mock('../ChatInput', () => ({
-  ChatInput: ({ onSendMessage }: any) => (
+  ChatInput: ({ onSendMessage, disabled }: any) => (
     <div data-testid="chat-input">
       <button 
         onClick={() => onSendMessage('test message')}
         data-testid="send-button"
+        disabled={disabled}
       >
         Send
       </button>
+      <div data-testid="input-disabled">{disabled ? 'disabled' : 'enabled'}</div>
     </div>
   )
 }))
 
-const mockUseHandleTodoRequest = useHandleTodoRequest as jest.MockedFunction<typeof useHandleTodoRequest>
-const mockGetTodos = getTodos as jest.MockedFunction<typeof getTodos>
+const mockProcessChatMessage = processChatMessage as jest.MockedFunction<typeof processChatMessage>
 
-describe('ChatInterface with BAML Integration', () => {
+describe('ChatInterface with Server Actions', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockUseHandleTodoRequest.mockReturnValue({
-      data: undefined,
-      streamData: undefined,
-      finalData: undefined,
-      isLoading: false,
-      isPending: false,
-      isStreaming: false,
-      isSuccess: false,
-      isError: false,
-      error: undefined,
-      status: 'idle',
-      mutate: jest.fn(),
-      reset: jest.fn()
-    })
-    mockGetTodos.mockResolvedValue([])
   })
 
   it('renders with correct structure', () => {
@@ -79,37 +53,11 @@ describe('ChatInterface with BAML Integration', () => {
     expect(screen.getByTestId('chat-input')).toBeInTheDocument()
   })
 
-
-  it('configures BAML hook with streaming', () => {
-    render(<ChatInterface />)
-    
-    expect(mockUseHandleTodoRequest).toHaveBeenCalledWith({
-      stream: true,
-      onFinalData: expect.any(Function)
+  it('sends messages through server action successfully', async () => {
+    mockProcessChatMessage.mockResolvedValue({
+      success: true,
+      message: 'Todo added successfully!'
     })
-  })
-
-
-
-  it('sends messages through BAML hook', async () => {
-    const mockMutate = jest.fn()
-    mockUseHandleTodoRequest.mockReturnValue({
-      data: undefined,
-      streamData: undefined,
-      finalData: undefined,
-      isLoading: false,
-      isPending: false,
-      isStreaming: false,
-      isSuccess: false,
-      isError: false,
-      error: undefined,
-      status: 'idle',
-      mutate: mockMutate,
-      reset: jest.fn()
-    })
-
-    const mockTodos = [{ id: '1', name: 'Test Todo', completed: false, priority: 'High Priority' as const, category: 'Work' }]
-    mockGetTodos.mockResolvedValue(mockTodos)
     
     render(<ChatInterface />)
     
@@ -117,110 +65,152 @@ describe('ChatInterface with BAML Integration', () => {
     fireEvent.click(sendButton)
     
     await waitFor(() => {
-      expect(mockGetTodos).toHaveBeenCalled()
-      expect(mockMutate).toHaveBeenCalledWith(
-        'test message',
-        mockTodos,
-        []
-      )
+      expect(mockProcessChatMessage).toHaveBeenCalledWith('test message', [])
+    })
+
+    // Should show both user and assistant messages
+    await waitFor(() => {
+      expect(screen.getByText('2 messages')).toBeInTheDocument()
     })
   })
 
-  it('handles tool actions on final response', async () => {
-    const mockOnFinalData = jest.fn()
-    mockUseHandleTodoRequest.mockImplementation((props) => {
-      if (props && 'onFinalData' in props) {
-        mockOnFinalData.mockImplementation(props.onFinalData!)
-      }
-      return {
-        data: undefined,
-        streamData: undefined,
-        finalData: undefined,
-        isLoading: false,
-        isPending: false,
-        isStreaming: false,
-        isSuccess: false,
-        isError: false,
-        error: undefined,
-        status: 'idle',
-        mutate: jest.fn(),
-        reset: jest.fn()
-      }
-    })
-
-    render(<ChatInterface />)
-
-    const toolAction = {
-      action: 'add_todo' as const,
-      name: 'Test Todo',
-      category: 'Work',
-      priority: 'High Priority' as const,
-      responseToUser: 'Todo added successfully!'
-    }
-
-    await act(async () => {
-      await mockOnFinalData(toolAction)
-    })
-
-    // Tool action is handled by handleChatToolResponse, which is mocked
-  })
-
-  it('does not execute tool for chat actions', async () => {
-    const mockOnFinalData = jest.fn()
-    mockUseHandleTodoRequest.mockImplementation((props) => {
-      if (props && 'onFinalData' in props) {
-        mockOnFinalData.mockImplementation(props.onFinalData!)
-      }
-      return {
-        data: undefined,
-        streamData: undefined,
-        finalData: undefined,
-        isLoading: false,
-        isPending: false,
-        isStreaming: false,
-        isSuccess: false,
-        isError: false,
-        error: undefined,
-        status: 'idle',
-        mutate: jest.fn(),
-        reset: jest.fn()
-      }
-    })
-
-    render(<ChatInterface />)
-
-    const chatAction = {
-      action: 'chat' as const,
-      responseToUser: 'Here is some advice...'
-    }
-
-    await act(async () => {
-      await mockOnFinalData(chatAction)
-    })
-
-    // Chat actions don't trigger handleChatToolResponse
-  })
-
-  it('handles error state from BAML hook', () => {
-    const mockError = new Error('BAML error') as BamlErrors
-    mockUseHandleTodoRequest.mockReturnValue({
-      data: undefined,
-      streamData: undefined,
-      finalData: undefined,
-      isLoading: false,
-      isPending: false,
-      isStreaming: false,
-      isSuccess: false,
-      isError: true,
-      error: mockError,
-      status: 'error',
-      mutate: jest.fn(),
-      reset: jest.fn()
+  it('handles server action error response', async () => {
+    mockProcessChatMessage.mockResolvedValue({
+      success: false,
+      message: 'Sorry, I encountered an error processing your request.'
     })
     
     render(<ChatInterface />)
     
-    // Component should still render without crashing
-    expect(screen.getByRole('heading', { name: 'AI Assistant' })).toBeInTheDocument()
+    const sendButton = screen.getByTestId('send-button')
+    fireEvent.click(sendButton)
+    
+    await waitFor(() => {
+      expect(mockProcessChatMessage).toHaveBeenCalledWith('test message', [])
+    })
+
+    // Should show error message from server
+    await waitFor(() => {
+      expect(screen.getByText('Sorry, I encountered an error processing your request.')).toBeInTheDocument()
+    })
+  })
+
+  it('handles server action exception', async () => {
+    mockProcessChatMessage.mockRejectedValue(new Error('Network error'))
+    
+    render(<ChatInterface />)
+    
+    const sendButton = screen.getByTestId('send-button')
+    fireEvent.click(sendButton)
+    
+    await waitFor(() => {
+      expect(mockProcessChatMessage).toHaveBeenCalledWith('test message', [])
+    })
+
+    // Should show generic error message from catch block
+    await waitFor(() => {
+      expect(screen.getByText('Sorry, I encountered an unexpected error. Please try again.')).toBeInTheDocument()
+    })
+  })
+
+  it('disables input during processing', async () => {
+    let resolvePromise: (value: any) => void
+    const promise = new Promise((resolve) => {
+      resolvePromise = resolve
+    })
+    mockProcessChatMessage.mockReturnValue(promise as any)
+    
+    render(<ChatInterface />)
+    
+    // Initially enabled
+    expect(screen.getByTestId('input-disabled')).toHaveTextContent('enabled')
+    
+    const sendButton = screen.getByTestId('send-button')
+    fireEvent.click(sendButton)
+    
+    // Should be disabled during processing
+    await waitFor(() => {
+      expect(screen.getByTestId('input-disabled')).toHaveTextContent('disabled')
+      expect(screen.getByTestId('loading-indicator')).toBeInTheDocument()
+    })
+    
+    // Resolve the promise
+    resolvePromise!({
+      success: true,
+      message: 'Response completed'
+    })
+    
+    // Should be enabled again after completion
+    await waitFor(() => {
+      expect(screen.getByTestId('input-disabled')).toHaveTextContent('enabled')
+    })
+  })
+
+  it('maintains conversation history', async () => {
+    mockProcessChatMessage.mockResolvedValue({
+      success: true,
+      message: 'First response'
+    })
+    
+    render(<ChatInterface />)
+    
+    const sendButton = screen.getByTestId('send-button')
+    
+    // Send first message
+    fireEvent.click(sendButton)
+    
+    await waitFor(() => {
+      expect(mockProcessChatMessage).toHaveBeenCalledWith('test message', [])
+      expect(screen.getByText('2 messages')).toBeInTheDocument()
+    })
+
+    // Reset mock for second call
+    mockProcessChatMessage.mockResolvedValue({
+      success: true,
+      message: 'Second response'
+    })
+    
+    // Send second message - should include conversation history
+    fireEvent.click(sendButton)
+    
+    await waitFor(() => {
+      expect(mockProcessChatMessage).toHaveBeenCalledWith('test message', expect.arrayContaining([
+        expect.objectContaining({ role: 'user', content: 'test message' }),
+        expect.objectContaining({ role: 'assistant', content: 'First response' })
+      ]))
+      expect(screen.getByText('4 messages')).toBeInTheDocument()
+    })
+  })
+
+  it('updates message count correctly', async () => {
+    mockProcessChatMessage.mockResolvedValue({
+      success: true,
+      message: 'Response message'
+    })
+    
+    render(<ChatInterface />)
+    
+    // Initially 0 messages
+    expect(screen.getByText('0 messages')).toBeInTheDocument()
+    
+    const sendButton = screen.getByTestId('send-button')
+    fireEvent.click(sendButton)
+    
+    // After sending, should have 2 messages (user + assistant)
+    await waitFor(() => {
+      expect(screen.getByText('2 messages')).toBeInTheDocument()
+    })
+  })
+
+  it('has proper accessibility attributes', () => {
+    render(<ChatInterface />)
+    
+    const chatSection = screen.getByRole('log')
+    expect(chatSection).toHaveAttribute('aria-live', 'polite')
+    expect(chatSection).toHaveAttribute('aria-labelledby', 'chat-heading')
+    expect(chatSection).toHaveAttribute('aria-label', 'Chat conversation')
+    
+    const heading = screen.getByRole('heading', { name: 'AI Assistant' })
+    expect(heading).toHaveAttribute('id', 'chat-heading')
   })
 })

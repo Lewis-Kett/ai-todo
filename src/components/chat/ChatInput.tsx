@@ -7,14 +7,15 @@ import { Send } from "lucide-react"
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void
+  disabled?: boolean
 }
 
-export function ChatInput({ onSendMessage }: ChatInputProps) {
+export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
   const [inputValue, setInputValue] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (inputValue.trim()) {
+    if (inputValue.trim() && !disabled) {
       onSendMessage(inputValue.trim())
       setInputValue("")
     }
@@ -35,8 +36,10 @@ export function ChatInput({ onSendMessage }: ChatInputProps) {
         onKeyDown={handleKeyDown}
         className="flex-1"
         aria-label="Chat message input"
+        disabled={disabled}
+        placeholder={disabled ? "AI is processing..." : "Type your message..."}
       />
-      <Button type="submit" size="icon" aria-label="Send message">
+      <Button type="submit" size="icon" aria-label="Send message" disabled={disabled || !inputValue.trim()}>
         <Send className="h-4 w-4" />
       </Button>
     </form>

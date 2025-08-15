@@ -11,8 +11,11 @@ const customJestConfig = {
   testEnvironment: 'jsdom',
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   moduleNameMapper: {
+    '^@/baml_client$': '<rootDir>/__mocks__/@/baml_client.js',
     '^@/baml_client/(.*)$': '<rootDir>/baml_client/$1',
     '^@/(.*)$': '<rootDir>/src/$1',
+    '../../baml_client': '<rootDir>/__mocks__/@/baml_client.js',
+    '../baml_client': '<rootDir>/__mocks__/@/baml_client.js',
   },
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',

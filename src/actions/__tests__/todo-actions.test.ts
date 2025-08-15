@@ -14,24 +14,26 @@ jest.mock('next/cache', () => ({
   unstable_cache: jest.fn((fn) => fn), // Pass through the function for testing
 }))
 
-// Mock fs.promises for in-memory testing
+// Mock shared data layer
 let mockTodos: Todo[] = []
 
-jest.mock('fs', () => ({
-  promises: {
-    readFile: jest.fn().mockImplementation(() => {
-      return Promise.resolve(JSON.stringify(mockTodos))
-    }),
-    writeFile: jest.fn().mockImplementation((_, data) => {
-      mockTodos = JSON.parse(data)
-      return Promise.resolve()
-    }),
-    mkdir: jest.fn().mockResolvedValue(undefined)
-  }
+jest.mock('@/lib/todo-data', () => ({
+  getTodosFromFile: jest.fn().mockImplementation(() => Promise.resolve(mockTodos)),
+  setTodosInFile: jest.fn().mockImplementation((todos: Todo[]) => {
+    mockTodos = todos
+    return Promise.resolve()
+  }),
+  revalidateTodos: jest.fn()
 }))
 
-// Import the mocked function for testing
-import { revalidateTag } from 'next/cache'
+// Mock shared operations - pass through to actual implementations for testing
+jest.mock('@/lib/todo-operations', () => {
+  const actual = jest.requireActual('@/lib/todo-operations')
+  return actual
+})
+
+// Import the mocked functions for testing
+import { revalidateTodos } from '@/lib/todo-data'
 
 describe('Todo Server Actions', () => {
   beforeEach(() => {
@@ -282,19 +284,19 @@ describe('Todo Server Actions', () => {
     })
   })
 
-  describe('revalidateTag integration', () => {
-    it('should call revalidateTag after mutations', async () => {
+  describe('revalidateTodos integration', () => {
+    it('should call revalidateTodos after mutations', async () => {
       await addTodo({ name: 'Test', category: 'Test', priority: 'Medium Priority' })
-      expect(revalidateTag).toHaveBeenCalledWith('todos')
+      expect(revalidateTodos).toHaveBeenCalled()
       
       await deleteTodo('test-id')
-      expect(revalidateTag).toHaveBeenCalledWith('todos')
+      expect(revalidateTodos).toHaveBeenCalled()
       
       await toggleTodoComplete('test-id')
-      expect(revalidateTag).toHaveBeenCalledWith('todos')
+      expect(revalidateTodos).toHaveBeenCalled()
       
       await updateTodo('test-id', { name: 'Updated' })
-      expect(revalidateTag).toHaveBeenCalledWith('todos')
+      expect(revalidateTodos).toHaveBeenCalled()
     })
   })
 })
