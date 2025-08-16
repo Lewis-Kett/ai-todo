@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useRef } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { ChatMessage } from "./ChatMessage"
 import type { Message } from "@/baml_client/types"
@@ -8,6 +11,15 @@ interface ChatMessagesProps {
 }
 
 export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ 
+      behavior: "smooth",
+      block: "end" 
+    })
+  }, [messages, isLoading])
+
   return (
     <ScrollArea className="h-full w-full">
       <div className="space-y-2 p-4">
@@ -24,6 +36,7 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
             <span className="text-sm">AI is thinking...</span>
           </div>
         )}
+        <div ref={bottomRef} />
       </div>
     </ScrollArea>
   )

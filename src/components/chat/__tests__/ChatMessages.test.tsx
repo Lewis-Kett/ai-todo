@@ -14,6 +14,10 @@ interface MockChatMessageProps {
   }
 }
 
+// Mock scrollIntoView
+const mockScrollIntoView = jest.fn()
+Element.prototype.scrollIntoView = mockScrollIntoView
+
 // Mock the scroll-area component
 jest.mock('@/components/ui/scroll-area', () => ({
   ScrollArea: ({ children, ...props }: MockScrollAreaProps) => (
@@ -45,6 +49,10 @@ describe('ChatMessages', () => {
       content: 'Hi there!'
     }
   ]
+
+  beforeEach(() => {
+    mockScrollIntoView.mockClear()
+  })
 
   it('renders empty state when no messages', () => {
     render(<ChatMessages messages={[]} />)
@@ -86,5 +94,26 @@ describe('ChatMessages', () => {
     
     const messagesContainer = container.querySelector('.space-y-2')
     expect(messagesContainer).toBeInTheDocument()
+  })
+
+  it('calls scrollIntoView when messages are rendered', () => {
+    render(<ChatMessages messages={mockMessages} />)
+    
+    expect(mockScrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'end'
+    })
+  })
+
+  it('calls scrollIntoView when loading state changes', () => {
+    const { rerender } = render(<ChatMessages messages={mockMessages} />)
+    mockScrollIntoView.mockClear()
+    
+    rerender(<ChatMessages messages={mockMessages} isLoading={true} />)
+    
+    expect(mockScrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'end'
+    })
   })
 })
