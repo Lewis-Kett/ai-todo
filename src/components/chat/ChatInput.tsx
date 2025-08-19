@@ -40,7 +40,7 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
         placeholder={disabled ? "AI is processing..." : "Type your message..."}
       />
       <Button type="submit" size="icon" aria-label="Send message" disabled={disabled || !inputValue.trim()}>
-        <Send className="h-4 w-4" />
+        <Send className="h-4 w-4 text-white" />
       </Button>
     </form>
   )

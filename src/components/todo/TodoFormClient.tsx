@@ -57,9 +57,9 @@ export function TodoFormClient() {
               type="submit" 
               aria-label="Add new task" 
               disabled={isPending}
-              className="transition-all duration-300 transform hover:scale-105 active:scale-95"
+              className="transition-all duration-300 transform hover:scale-105 active:scale-95 text-white"
             >
-              <Plus className={`h-4 w-4 mr-2 transition-transform duration-300 ${
+              <Plus className={`h-4 w-4 mr-2 transition-transform duration-300 text-white ${
                 isPending ? 'animate-spin' : ''
               }`} aria-hidden="true" />
               {isPending ? 'Adding...' : 'Add Task'}
