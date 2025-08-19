@@ -1,345 +1,301 @@
-import { processChatMessage } from '../chat-actions'
+import { streamChatMessage } from '../chat-actions'
 import { b } from '@/baml_client'
 import { Message } from '@/baml_client/types'
 import { Todo } from '@/types/todo'
+import { getTodos } from '../todo-actions'
 
-// Mock shared data layer
-let mockTodos: Todo[] = []
-
-// Mock todo-actions to simulate the server actions
+// Mock getTodos server action
 jest.mock('../todo-actions', () => ({
-  getTodos: jest.fn().mockImplementation(() => Promise.resolve([...mockTodos])),
-  addTodo: jest.fn().mockImplementation((formData) => {
-    const newTodo: Todo = {
-      id: 'test-uuid-123',
-      name: formData.name,
-      category: formData.category,
-      priority: formData.priority,
-      completed: false
-    }
-    mockTodos = [...mockTodos, newTodo]
-    return Promise.resolve()
-  }),
-  deleteTodo: jest.fn().mockImplementation((id) => {
-    mockTodos = mockTodos.filter(todo => todo.id !== id)
-    return Promise.resolve()
-  }),
-  toggleTodoComplete: jest.fn().mockImplementation((id) => {
-    mockTodos = mockTodos.map(todo =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    )
-    return Promise.resolve()
-  }),
-  updateTodo: jest.fn().mockImplementation((id, updates) => {
-    mockTodos = mockTodos.map(todo =>
-      todo.id === id ? { ...todo, ...updates } : todo
-    )
-    return Promise.resolve()
-  })
+  getTodos: jest.fn()
 }))
 
-// BAML client is mocked globally in __mocks__/@/baml_client.js
+// Mock BAML client
+jest.mock('@/baml_client', () => ({
+  b: {
+    stream: {
+      HandleTodoRequest: jest.fn()
+    }
+  }
+}))
 
-// Mock crypto.randomUUID
-const mockRandomUUID = jest.fn()
-Object.defineProperty(global, 'crypto', {
-  value: {
-    randomUUID: mockRandomUUID,
-  },
-})
-
-// Import mocked functions
-import { getTodos, addTodo, deleteTodo, toggleTodoComplete, updateTodo } from '../todo-actions'
-
+// Cast mocked functions for type safety
 const mockGetTodos = getTodos as jest.MockedFunction<typeof getTodos>
-const mockAddTodo = addTodo as jest.MockedFunction<typeof addTodo>
-const mockDeleteTodo = deleteTodo as jest.MockedFunction<typeof deleteTodo>
-const mockToggleTodo = toggleTodoComplete as jest.MockedFunction<typeof toggleTodoComplete>
-const mockUpdateTodo = updateTodo as jest.MockedFunction<typeof updateTodo>
-const mockBAML = b.HandleTodoRequest as jest.MockedFunction<typeof b.HandleTodoRequest>
+const mockBAMLStream = b.stream.HandleTodoRequest as jest.MockedFunction<typeof b.stream.HandleTodoRequest>
 
-describe('processChatMessage', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    mockRandomUUID.mockReturnValue('test-uuid-123')
-    // Reset mock todos
-    mockTodos = [
-      { id: '1', name: 'Existing task', category: 'Work', priority: 'High Priority', completed: false }
-    ]
-    // Reset mock implementations
-    mockGetTodos.mockImplementation(() => Promise.resolve([...mockTodos]))
-    mockAddTodo.mockImplementation((formData) => {
-      const newTodo: Todo = {
-        id: 'test-uuid-123',
-        name: formData.name,
-        category: formData.category,
-        priority: formData.priority,
-        completed: false
-      }
-      mockTodos = [...mockTodos, newTodo]
-      return Promise.resolve()
-    })
-    mockDeleteTodo.mockImplementation((id) => {
-      mockTodos = mockTodos.filter(todo => todo.id !== id)
-      return Promise.resolve()
-    })
-    mockToggleTodo.mockImplementation((id) => {
-      mockTodos = mockTodos.map(todo =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-      return Promise.resolve()
-    })
-    mockUpdateTodo.mockImplementation((id, updates) => {
-      mockTodos = mockTodos.map(todo =>
-        todo.id === id ? { ...todo, ...updates } : todo
-      )
-      return Promise.resolve()
-    })
+// Helper to create a mock async generator from responses
+function createMockStream(responses: any[]) {
+  return (async function* () {
+    for (const response of responses) {
+      yield response
+    }
+  })()
+}
+
+describe('streamChatMessage', () => {
+  const mockTodos: Todo[] = [
+    { id: '1', name: 'Existing task', category: 'Work', priority: 'High Priority', completed: false }
+  ]
+
+  // Suppress console.error for these tests since we're testing error conditions
+  const originalError = console.error
+  beforeAll(() => {
+    console.error = jest.fn()
   })
 
-  describe('atomic operations', () => {
-    beforeEach(() => {
-      // Clear all mocks before each test in this describe block
-      jest.clearAllMocks()
-    })
+  afterAll(() => {
+    console.error = originalError
+  })
 
-    it('should perform atomic add_todo operation with single revalidation', async () => {
-      // Mock BAML response
-      mockBAML.mockResolvedValueOnce({
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockGetTodos.mockResolvedValue(mockTodos)
+  })
+
+  describe('successful streaming operations', () => {
+    it('should stream add_todo responses', async () => {
+      const mockResponse = {
         action: 'add_todo',
         name: 'New task',
         category: 'Personal',
         priority: 'Medium Priority',
         responseToUser: 'Added your task!'
-      })
+      }
+      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
 
       const messages: Message[] = []
-      const result = await processChatMessage('Add a new task', messages)
+      const stream = await streamChatMessage('Add a new task', messages)
 
-      // Verify operations were called
+      // Verify getTodos is called to fetch current state
       expect(mockGetTodos).toHaveBeenCalledTimes(1)
-      expect(mockAddTodo).toHaveBeenCalledWith({
-        name: 'New task',
-        category: 'Personal',
-        priority: 'Medium Priority'
-      })
+      
+      // Verify BAML stream is called with current todos (not empty array)
+      expect(mockBAMLStream).toHaveBeenCalledWith('Add a new task', mockTodos, messages)
 
-      // Verify the new todo was added
-      expect(mockTodos).toHaveLength(2)
-      expect(mockTodos[1]).toEqual({
-        id: 'test-uuid-123',
-        name: 'New task',
-        category: 'Personal',
-        priority: 'Medium Priority',
-        completed: false
-      })
+      // Collect streamed responses
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
 
-      expect(result).toEqual({
-        message: 'Added your task!',
-        success: true
-      })
+      expect(responses).toEqual([mockResponse])
     })
 
-    it('should perform atomic delete_todo operation', async () => {
-      // Set up initial todos
-      mockTodos = [
-        { id: '1', name: 'Task 1', category: 'Work', priority: 'High Priority', completed: false },
-        { id: '2', name: 'Task 2', category: 'Personal', priority: 'Low Priority', completed: true }
-      ]
-
-      mockBAML.mockResolvedValueOnce({
+    it('should stream delete_todo responses', async () => {
+      const mockResponse = {
         action: 'delete_todo',
         id: '1',
         responseToUser: 'Task deleted!'
-      })
+      }
+      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
 
-      const result = await processChatMessage('Delete the first task', [])
+      const messages: Message[] = []
+      const stream = await streamChatMessage('Delete the first task', messages)
 
-      expect(mockTodos).toHaveLength(1)
-      expect(mockTodos[0].id).toBe('2')
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
 
-      expect(mockDeleteTodo).toHaveBeenCalledWith('1')
-      expect(result.success).toBe(true)
+      expect(responses).toEqual([mockResponse])
+      expect(mockBAMLStream).toHaveBeenCalledWith('Delete the first task', mockTodos, messages)
     })
 
-    it('should perform atomic toggle_todo operation', async () => {
-      // Set up initial todos
-      mockTodos = [
-        { id: '1', name: 'Task 1', category: 'Work', priority: 'High Priority', completed: false }
-      ]
-
-      mockBAML.mockResolvedValueOnce({
+    it('should stream toggle_todo responses', async () => {
+      const mockResponse = {
         action: 'toggle_todo',
         id: '1',
-        responseToUser: 'Task toggled!'
-      })
+        responseToUser: 'Task completed!'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
 
-      const result = await processChatMessage('Toggle the task', [])
+      const messages: Message[] = []
+      const stream = await streamChatMessage('Toggle the task', messages)
 
-      expect(mockTodos[0].completed).toBe(true)
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
 
-      expect(mockToggleTodo).toHaveBeenCalledWith('1')
-      expect(result.success).toBe(true)
+      expect(responses).toEqual([mockResponse])
+      expect(mockBAMLStream).toHaveBeenCalledWith('Toggle the task', mockTodos, messages)
     })
 
-    it('should perform atomic update_todo operation', async () => {
-      // Set up initial todos
-      mockTodos = [
-        { id: '1', name: 'Old name', category: 'Old category', priority: 'Low Priority', completed: false }
-      ]
-
-      mockBAML.mockResolvedValueOnce({
+    it('should stream update_todo responses', async () => {
+      const mockResponse = {
         action: 'update_todo',
         id: '1',
-        name: 'New name',
+        name: 'Updated task name',
         category: 'New category',
         priority: 'High Priority',
         responseToUser: 'Task updated!'
-      })
+      }
+      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
 
-      const result = await processChatMessage('Update the task', [])
+      const messages: Message[] = []
+      const stream = await streamChatMessage('Update the task', messages)
 
-      expect(mockTodos[0]).toEqual({
-        id: '1',
-        name: 'New name',
-        category: 'New category',
-        priority: 'High Priority',
-        completed: false
-      })
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
 
-      expect(mockUpdateTodo).toHaveBeenCalledWith('1', {
-        name: 'New name',
-        category: 'New category',
-        priority: 'High Priority'
-      })
-      expect(result.success).toBe(true)
+      expect(responses).toEqual([mockResponse])
+      expect(mockBAMLStream).toHaveBeenCalledWith('Update the task', mockTodos, messages)
     })
-  })
 
-  describe('chat action', () => {
-    it('should handle chat action without file operations or cache invalidation', async () => {
-      jest.clearAllMocks() // Clear any previous mock calls
-      mockTodos = []
-      
-      mockBAML.mockResolvedValueOnce({
+    it('should stream chat responses', async () => {
+      const mockResponse = {
         action: 'chat',
-        responseToUser: 'Here is some advice...'
-      })
+        responseToUser: 'Here is some helpful advice...'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
 
-      const result = await processChatMessage('Give me advice', [])
+      const messages: Message[] = []
+      const stream = await streamChatMessage('Give me advice', messages)
 
-      // File should be read initially, but no todo operations should occur for chat
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
+
+      expect(responses).toEqual([mockResponse])
       expect(mockGetTodos).toHaveBeenCalledTimes(1)
-      expect(mockAddTodo).not.toHaveBeenCalled()
-      expect(mockDeleteTodo).not.toHaveBeenCalled()
-      expect(mockToggleTodo).not.toHaveBeenCalled()
-      expect(mockUpdateTodo).not.toHaveBeenCalled()
-
-      expect(result).toEqual({
-        message: 'Here is some advice...',
-        success: true
-      })
+      expect(mockBAMLStream).toHaveBeenCalledWith('Give me advice', mockTodos, messages)
     })
   })
 
-  describe('error handling', () => {
-    it('should handle BAML errors gracefully', async () => {
-      mockTodos = []
-      mockBAML.mockRejectedValueOnce(new Error('BAML error'))
+  describe('multiple streaming responses', () => {
+    it('should stream multiple responses in sequence', async () => {
+      const responses = [
+        { action: 'chat', responseToUser: 'Processing...' },
+        { action: 'add_todo', name: 'New task', category: 'Work', priority: 'High Priority', responseToUser: 'Task added!' }
+      ]
+      mockBAMLStream.mockReturnValue(createMockStream(responses))
 
-      const result = await processChatMessage('Test message', [])
+      const stream = await streamChatMessage('Add a work task', [])
 
-      expect(result).toEqual({
-        message: 'Sorry, I encountered an error processing your request.',
-        success: false
-      })
+      const streamedResponses = []
+      for await (const response of stream) {
+        streamedResponses.push(response)
+      }
 
-      // Should not have called any todo operations after error
-      expect(mockAddTodo).not.toHaveBeenCalled()
-      expect(mockDeleteTodo).not.toHaveBeenCalled()
-      expect(mockToggleTodo).not.toHaveBeenCalled()
-      expect(mockUpdateTodo).not.toHaveBeenCalled()
-    })
-
-    it('should handle file read errors by starting with empty array', async () => {
-      // Mock getTodosFromFile to throw error, simulating file read failure
-      mockGetTodos.mockRejectedValueOnce(new Error('File not found'))
-      
-      mockBAML.mockResolvedValueOnce({
-        action: 'add_todo',
-        name: 'New task',
-        category: 'Personal',
-        priority: 'Medium Priority',
-        responseToUser: 'Added your task!'
-      })
-
-      const result = await processChatMessage('Add a task', [])
-
-      // Error should be caught and handled gracefully
-      expect(result).toEqual({
-        message: 'Sorry, I encountered an error processing your request.',
-        success: false
-      })
-    })
-  })
-
-  describe('server action delegation', () => {
-    beforeEach(() => {
-      // Ensure complete isolation for this test suite
-      jest.resetAllMocks()
-      jest.clearAllMocks()
-      mockTodos = []
-      
-      // Re-setup the mocks completely fresh
-      mockGetTodos.mockImplementation(() => Promise.resolve([]))
-      mockAddTodo.mockImplementation(() => Promise.resolve())
-      mockDeleteTodo.mockImplementation(() => Promise.resolve())
-      mockToggleTodo.mockImplementation(() => Promise.resolve())
-      mockUpdateTodo.mockImplementation(() => Promise.resolve())
-    })
-
-    it('should delegate to appropriate server action', async () => {
-      mockBAML.mockResolvedValueOnce({
-        action: 'add_todo',
-        name: 'Test task',
-        category: 'Test',
-        priority: 'Low Priority',
-        responseToUser: 'Added!'
-      })
-
-      await processChatMessage('Add task', [])
-
-      // Verify server action was called
-      expect(mockAddTodo).toHaveBeenCalledTimes(1)
-      expect(mockAddTodo).toHaveBeenCalledWith({
-        name: 'Test task',
-        category: 'Test',
-        priority: 'Low Priority'
-      })
+      expect(streamedResponses).toEqual(responses)
     })
   })
 
   describe('conversation history handling', () => {
-    it('should pass conversation history to BAML correctly', async () => {
-      jest.clearAllMocks() // Clear any previous mock calls
-      mockTodos = []
-      
-      const messages: Message[] = [
-        { id: '1', role: 'user', content: 'Previous message' },
-        { id: '2', role: 'assistant', content: 'Previous response' }
+    it('should pass conversation history to BAML stream', async () => {
+      const conversationHistory: Message[] = [
+        { id: '1', role: 'user', content: 'Previous user message' },
+        { id: '2', role: 'assistant', content: 'Previous assistant response' }
       ]
-
-      mockBAML.mockResolvedValueOnce({
+      
+      const mockResponse = {
         action: 'chat',
-        responseToUser: 'Response'
+        responseToUser: 'Based on our previous conversation...'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
+
+      await streamChatMessage('Continue our discussion', conversationHistory)
+
+      expect(mockBAMLStream).toHaveBeenCalledWith(
+        'Continue our discussion',
+        mockTodos,
+        conversationHistory
+      )
+    })
+
+    it('should handle empty conversation history', async () => {
+      const mockResponse = {
+        action: 'chat',
+        responseToUser: 'Hello! How can I help?'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
+
+      await streamChatMessage('Hello', [])
+
+      expect(mockBAMLStream).toHaveBeenCalledWith('Hello', mockTodos, [])
+    })
+  })
+
+  describe('error handling', () => {
+    it('should throw error when getTodos fails', async () => {
+      mockGetTodos.mockRejectedValue(new Error('Database error'))
+
+      await expect(streamChatMessage('Add a task', [])).rejects.toThrow(
+        'Sorry, I encountered an error processing your request.'
+      )
+    })
+
+    it('should throw error when BAML stream fails', async () => {
+      mockBAMLStream.mockImplementation(() => {
+        throw new Error('BAML API error')
       })
 
-      await processChatMessage('New message', messages)
+      await expect(streamChatMessage('Test message', [])).rejects.toThrow(
+        'Sorry, I encountered an error processing your request.'
+      )
+    })
 
-      expect(mockBAML).toHaveBeenCalledWith(
-        'New message',
-        [],
-        messages
+    it('should handle streaming errors gracefully', async () => {
+      const errorStream = (async function* () {
+        yield { action: 'chat', responseToUser: 'Starting...' }
+        throw new Error('Stream interrupted')
+      })()
+      
+      mockBAMLStream.mockReturnValue(errorStream)
+
+      const stream = await streamChatMessage('Test', [])
+      
+      await expect(async () => {
+        const responses = []
+        for await (const response of stream) {
+          responses.push(response)
+        }
+      }).rejects.toThrow('Stream interrupted')
+    })
+  })
+
+  describe('different todo list states', () => {
+    it('should handle empty todo list', async () => {
+      mockGetTodos.mockResolvedValue([])
+      
+      const mockResponse = {
+        action: 'add_todo',
+        name: 'First task',
+        category: 'Getting Started',
+        priority: 'High Priority',
+        responseToUser: 'Added your first task!'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
+
+      await streamChatMessage('Add my first task', [])
+
+      expect(mockBAMLStream).toHaveBeenCalledWith('Add my first task', [], [])
+    })
+
+    it('should handle large todo list', async () => {
+      const largeTodoList: Todo[] = Array.from({ length: 50 }, (_, i) => ({
+        id: `${i + 1}`,
+        name: `Task ${i + 1}`,
+        category: 'Work',
+        priority: 'Medium Priority',
+        completed: i % 3 === 0
+      }))
+      mockGetTodos.mockResolvedValue(largeTodoList)
+      
+      const mockResponse = {
+        action: 'chat',
+        responseToUser: 'You have quite a few tasks! Let me help organize them.'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
+
+      await streamChatMessage('Help me organize my tasks', [])
+
+      expect(mockBAMLStream).toHaveBeenCalledWith(
+        'Help me organize my tasks',
+        largeTodoList,
+        []
       )
     })
   })

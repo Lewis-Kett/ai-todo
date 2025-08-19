@@ -1,11 +1,14 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { ChatInterface } from '../ChatInterface'
-import { processChatMessage } from '@/actions/chat-actions'
+import { useChatStream } from '../hooks/useChatStream'
+import { Message } from '@/baml_client/types'
 
-// Mock the server action
-jest.mock('@/actions/chat-actions', () => ({
-  processChatMessage: jest.fn()
+// Mock the custom hook
+jest.mock('../hooks/useChatStream', () => ({
+  useChatStream: jest.fn()
 }))
+
+const mockUseChatStream = useChatStream as jest.MockedFunction<typeof useChatStream>
 
 // Mock child components
 jest.mock('../ChatMessages', () => ({
@@ -37,14 +40,28 @@ jest.mock('../ChatInput', () => ({
   )
 }))
 
-const mockProcessChatMessage = processChatMessage as jest.MockedFunction<typeof processChatMessage>
-
-describe('ChatInterface with Server Actions', () => {
+describe('ChatInterface', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Default mock implementation
+    mockUseChatStream.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      sendMessage: jest.fn(),
+      clearError: jest.fn()
+    })
   })
 
   it('renders with correct structure', () => {
+    mockUseChatStream.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      sendMessage: jest.fn(),
+      clearError: jest.fn()
+    })
+    
     render(<ChatInterface />)
     
     expect(screen.getByRole('heading', { name: 'AI Assistant' })).toBeInTheDocument()
@@ -53,10 +70,19 @@ describe('ChatInterface with Server Actions', () => {
     expect(screen.getByTestId('chat-input')).toBeInTheDocument()
   })
 
-  it('sends messages through server action successfully', async () => {
-    mockProcessChatMessage.mockResolvedValue({
-      success: true,
-      message: 'Todo added successfully!'
+  it('sends messages through streaming hook successfully', async () => {
+    const mockSendMessage = jest.fn()
+    const messages: Message[] = [
+      { id: '1', role: 'user', content: 'test message' },
+      { id: '2', role: 'assistant', content: 'Todo added successfully!' }
+    ]
+    
+    mockUseChatStream.mockReturnValue({
+      messages,
+      isLoading: false,
+      error: null,
+      sendMessage: mockSendMessage,
+      clearError: jest.fn()
     })
     
     render(<ChatInterface />)
@@ -64,142 +90,167 @@ describe('ChatInterface with Server Actions', () => {
     const sendButton = screen.getByTestId('send-button')
     fireEvent.click(sendButton)
     
-    await waitFor(() => {
-      expect(mockProcessChatMessage).toHaveBeenCalledWith('test message', [])
-    })
-
-    // Should show both user and assistant messages
-    await waitFor(() => {
-      expect(screen.getByText('2 messages')).toBeInTheDocument()
-    })
+    expect(mockSendMessage).toHaveBeenCalledWith('test message')
+    expect(screen.getByText('2 messages')).toBeInTheDocument()
   })
 
-  it('handles server action error response', async () => {
-    mockProcessChatMessage.mockResolvedValue({
-      success: false,
-      message: 'Sorry, I encountered an error processing your request.'
+  it('displays error messages with dismiss functionality', async () => {
+    const mockClearError = jest.fn()
+    const mockSendMessage = jest.fn()
+    
+    mockUseChatStream.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: 'Failed to process your request. Please try again.',
+      sendMessage: mockSendMessage,
+      clearError: mockClearError
     })
     
     render(<ChatInterface />)
     
-    const sendButton = screen.getByTestId('send-button')
-    fireEvent.click(sendButton)
+    expect(screen.getByText('Failed to process your request. Please try again.')).toBeInTheDocument()
+    expect(screen.getByText('Dismiss')).toBeInTheDocument()
     
-    await waitFor(() => {
-      expect(mockProcessChatMessage).toHaveBeenCalledWith('test message', [])
-    })
-
-    // Should show error message from server
-    await waitFor(() => {
-      expect(screen.getByText('Sorry, I encountered an error processing your request.')).toBeInTheDocument()
-    })
+    // Test error dismissal
+    fireEvent.click(screen.getByText('Dismiss'))
+    expect(mockClearError).toHaveBeenCalledTimes(1)
   })
 
-  it('handles server action exception', async () => {
-    mockProcessChatMessage.mockRejectedValue(new Error('Network error'))
+  it('hides error section when no error is present', () => {
+    mockUseChatStream.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      sendMessage: jest.fn(),
+      clearError: jest.fn()
+    })
     
     render(<ChatInterface />)
     
-    const sendButton = screen.getByTestId('send-button')
-    fireEvent.click(sendButton)
-    
-    await waitFor(() => {
-      expect(mockProcessChatMessage).toHaveBeenCalledWith('test message', [])
-    })
-
-    // Should show generic error message from catch block
-    await waitFor(() => {
-      expect(screen.getByText('Sorry, I encountered an unexpected error. Please try again.')).toBeInTheDocument()
-    })
+    expect(screen.queryByText('Dismiss')).not.toBeInTheDocument()
   })
 
   it('disables input during processing', async () => {
-    let resolvePromise: (value: any) => void
-    const promise = new Promise((resolve) => {
-      resolvePromise = resolve
-    })
-    mockProcessChatMessage.mockReturnValue(promise as any)
+    const mockSendMessage = jest.fn()
     
-    render(<ChatInterface />)
+    // Initially not loading
+    mockUseChatStream.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      sendMessage: mockSendMessage,
+      clearError: jest.fn()
+    })
+    
+    const { rerender } = render(<ChatInterface />)
     
     // Initially enabled
     expect(screen.getByTestId('input-disabled')).toHaveTextContent('enabled')
     
-    const sendButton = screen.getByTestId('send-button')
-    fireEvent.click(sendButton)
+    // Update to loading state
+    mockUseChatStream.mockReturnValue({
+      messages: [],
+      isLoading: true,
+      error: null,
+      sendMessage: mockSendMessage,
+      clearError: jest.fn()
+    })
+    
+    rerender(<ChatInterface />)
     
     // Should be disabled during processing
-    await waitFor(() => {
-      expect(screen.getByTestId('input-disabled')).toHaveTextContent('disabled')
-      expect(screen.getByTestId('loading-indicator')).toBeInTheDocument()
+    expect(screen.getByTestId('input-disabled')).toHaveTextContent('disabled')
+    expect(screen.getByTestId('loading-indicator')).toBeInTheDocument()
+    
+    // Update to completed state
+    mockUseChatStream.mockReturnValue({
+      messages: [{ id: '1', role: 'assistant', content: 'Response completed' }],
+      isLoading: false,
+      error: null,
+      sendMessage: mockSendMessage,
+      clearError: jest.fn()
     })
     
-    // Resolve the promise
-    resolvePromise!({
-      success: true,
-      message: 'Response completed'
-    })
+    rerender(<ChatInterface />)
     
     // Should be enabled again after completion
-    await waitFor(() => {
-      expect(screen.getByTestId('input-disabled')).toHaveTextContent('enabled')
-    })
+    expect(screen.getByTestId('input-disabled')).toHaveTextContent('enabled')
   })
 
-  it('maintains conversation history', async () => {
-    mockProcessChatMessage.mockResolvedValue({
-      success: true,
-      message: 'First response'
+  it('maintains conversation history through streaming hook', async () => {
+    const mockSendMessage = jest.fn()
+    
+    // First state with initial messages
+    const initialMessages: Message[] = [
+      { id: '1', role: 'user', content: 'test message' },
+      { id: '2', role: 'assistant', content: 'First response' }
+    ]
+    
+    mockUseChatStream.mockReturnValue({
+      messages: initialMessages,
+      isLoading: false,
+      error: null,
+      sendMessage: mockSendMessage,
+      clearError: jest.fn()
     })
     
-    render(<ChatInterface />)
+    const { rerender } = render(<ChatInterface />)
     
-    const sendButton = screen.getByTestId('send-button')
+    expect(screen.getByText('2 messages')).toBeInTheDocument()
     
-    // Send first message
-    fireEvent.click(sendButton)
+    // Update with more messages
+    const updatedMessages: Message[] = [
+      ...initialMessages,
+      { id: '3', role: 'user', content: 'test message' },
+      { id: '4', role: 'assistant', content: 'Second response' }
+    ]
     
-    await waitFor(() => {
-      expect(mockProcessChatMessage).toHaveBeenCalledWith('test message', [])
-      expect(screen.getByText('2 messages')).toBeInTheDocument()
+    mockUseChatStream.mockReturnValue({
+      messages: updatedMessages,
+      isLoading: false,
+      error: null,
+      sendMessage: mockSendMessage,
+      clearError: jest.fn()
     })
-
-    // Reset mock for second call
-    mockProcessChatMessage.mockResolvedValue({
-      success: true,
-      message: 'Second response'
-    })
     
-    // Send second message - should include conversation history
-    fireEvent.click(sendButton)
+    rerender(<ChatInterface />)
     
-    await waitFor(() => {
-      expect(mockProcessChatMessage).toHaveBeenCalledWith('test message', expect.arrayContaining([
-        expect.objectContaining({ role: 'user', content: 'test message' }),
-        expect.objectContaining({ role: 'assistant', content: 'First response' })
-      ]))
-      expect(screen.getByText('4 messages')).toBeInTheDocument()
-    })
+    expect(screen.getByText('4 messages')).toBeInTheDocument()
   })
 
   it('updates message count correctly', async () => {
-    mockProcessChatMessage.mockResolvedValue({
-      success: true,
-      message: 'Response message'
-    })
-    
-    render(<ChatInterface />)
+    const mockSendMessage = jest.fn()
     
     // Initially 0 messages
+    mockUseChatStream.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: null,
+      sendMessage: mockSendMessage,
+      clearError: jest.fn()
+    })
+    
+    const { rerender } = render(<ChatInterface />)
+    
     expect(screen.getByText('0 messages')).toBeInTheDocument()
     
-    const sendButton = screen.getByTestId('send-button')
-    fireEvent.click(sendButton)
+    // Update with messages
+    const messages: Message[] = [
+      { id: '1', role: 'user', content: 'test message' },
+      { id: '2', role: 'assistant', content: 'Response message' }
+    ]
     
-    // After sending, should have 2 messages (user + assistant)
-    await waitFor(() => {
-      expect(screen.getByText('2 messages')).toBeInTheDocument()
+    mockUseChatStream.mockReturnValue({
+      messages,
+      isLoading: false,
+      error: null,
+      sendMessage: mockSendMessage,
+      clearError: jest.fn()
     })
+    
+    rerender(<ChatInterface />)
+    
+    expect(screen.getByText('2 messages')).toBeInTheDocument()
   })
 
   it('has proper accessibility attributes', () => {
@@ -212,5 +263,41 @@ describe('ChatInterface with Server Actions', () => {
     
     const heading = screen.getByRole('heading', { name: 'AI Assistant' })
     expect(heading).toHaveAttribute('id', 'chat-heading')
+  })
+
+  it('renders error section with proper styling', () => {
+    mockUseChatStream.mockReturnValue({
+      messages: [],
+      isLoading: false,
+      error: 'Connection failed',
+      sendMessage: jest.fn(),
+      clearError: jest.fn()
+    })
+    
+    render(<ChatInterface />)
+    
+    // The error section is the parent div that contains the error styling
+    const errorSection = screen.getByText('Connection failed').closest('.p-4')
+    expect(errorSection).toHaveClass('p-4', 'bg-red-50', 'border-t', 'border-red-200')
+  })
+
+  it('preserves message content during streaming', () => {
+    const messages: Message[] = [
+      { id: '1', role: 'user', content: 'Add a new task' },
+      { id: '2', role: 'assistant', content: 'I\'ll add that task for you!' }
+    ]
+    
+    mockUseChatStream.mockReturnValue({
+      messages,
+      isLoading: false,
+      error: null,
+      sendMessage: jest.fn(),
+      clearError: jest.fn()
+    })
+    
+    render(<ChatInterface />)
+    
+    expect(screen.getByTestId('message-1')).toHaveTextContent('Add a new task')
+    expect(screen.getByTestId('message-2')).toHaveTextContent('I\'ll add that task for you!')
   })
 })

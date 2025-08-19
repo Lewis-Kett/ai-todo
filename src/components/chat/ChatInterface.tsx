@@ -3,45 +3,10 @@
 import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { ChatMessages } from "./ChatMessages"
 import { ChatInput } from "./ChatInput"
-import { useState } from "react"
-import { Message } from "@/baml_client/types"
-import { createMessage } from "./utils/messageUtils"
-import { processChatMessage } from "@/actions/chat-actions"
+import { useChatStream } from "./hooks/useChatStream"
 
 export function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-
-  //TODO Wrap this guy in a custom hook
-  const handleSendMessage = async (inputValue: string) => {
-    try {
-      setIsLoading(true)
-      
-      const userMessage: Message = createMessage("user", inputValue)
-      // Add user message immediately
-      setMessages((prev) => [...prev, userMessage])
-
-      // Call server action directly
-      const response = await processChatMessage(inputValue, messages)
-      
-      // Add assistant response
-      if (response.success) {
-        const assistantMessage = createMessage("assistant", response.message)
-        setMessages(prev => [...prev, assistantMessage])
-      } else {
-        // Handle error case
-        const errorMessage = createMessage("assistant", response.message || "Sorry, I encountered an error processing your request.")
-        setMessages(prev => [...prev, errorMessage])
-      }
-    } catch (error) {
-      console.error("Error processing message:", error)
-      // Add error message to chat
-      const errorMessage = createMessage("assistant", "Sorry, I encountered an unexpected error. Please try again.")
-      setMessages(prev => [...prev, errorMessage])
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const { messages, isLoading, error, sendMessage, clearError } = useChatStream()
 
   return (
     <Card className="flex flex-col h-[600px]">
@@ -62,13 +27,24 @@ export function ChatInterface() {
           aria-labelledby="chat-heading"
           aria-label="Chat conversation"
         >
-          <ChatMessages
-            messages={messages}
-            isLoading={isLoading}
-          />
+          <ChatMessages messages={messages} isLoading={isLoading} />
         </div>
 
-        <ChatInput onSendMessage={handleSendMessage} disabled={isLoading} />
+        {error && (
+          <div className="p-4 bg-red-50 border-t border-red-200">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-red-700">{error}</span>
+              <button
+                onClick={clearError}
+                className="text-red-500 hover:text-red-700 text-sm underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+
+        <ChatInput onSendMessage={sendMessage} disabled={isLoading} />
       </CardContent>
     </Card>
   )

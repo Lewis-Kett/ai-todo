@@ -3,9 +3,12 @@ module.exports = {
   b: {
     HandleTodoRequest: jest.fn(),
     stream: {
-      HandleTodoRequest: jest.fn(() => ({
-        toStreamable: jest.fn().mockReturnValue('mock-streamable')
-      }))
+      HandleTodoRequest: jest.fn(() => {
+        // Return an async generator by default
+        return (async function* () {
+          yield { action: 'chat', responseToUser: 'Default mock response' }
+        })()
+      })
     }
   }
 }

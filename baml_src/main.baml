@@ -16,36 +16,36 @@ class TodoItem {
 
 // Tool classes for CRUD operations
 class AddTodoTool {
-  action "add_todo"
-  name string @description("The todo item name")
-  category string @description("Category like Work, Personal, etc.")
-  priority "High Priority" | "Medium Priority" | "Low Priority"
+  action "add_todo" @stream.not_null
+  name string @stream.done @description("The todo item name")
+  category string @stream.done @description("Category like Work, Personal, etc.")
+  priority "High Priority" | "Medium Priority" | "Low Priority" @stream.done
   responseToUser string @stream.not_null @description("Your response to the users request") 
 }
 
 class DeleteTodoTool {
-  action "delete_todo"
-  id string @description("The ID of the todo item to delete")
+  action "delete_todo" @stream.not_null
+  id string @stream.done @description("The ID of the todo item to delete")
   responseToUser string @stream.not_null @description("Your response to the users request")
 }
 
 class ToggleTodoTool {
-  action "toggle_todo"
-  id string @description("The ID of the todo item to toggle completion status")
+  action "toggle_todo" @stream.not_null
+  id string @stream.done @description("The ID of the todo item to toggle completion status")
   responseToUser string @stream.not_null @description("Your response to the users request")
 }
 
 class UpdateTodoTool {
-  action "update_todo"
-  id string @description("The ID of the todo item to update")
-  name string? @description("New name for the todo item (optional)")
-  category string? @description("New category for the todo item (optional)")
-  priority ("High Priority" | "Medium Priority" | "Low Priority")? @description("New priority for the todo item (optional)")
+  action "update_todo" @stream.not_null
+  id string @stream.done @description("The ID of the todo item to update")
+  name string? @stream.done @description("New name for the todo item (optional)")
+  category string? @stream.done @description("New category for the todo item (optional)")
+  priority ("High Priority" | "Medium Priority" | "Low Priority")? @stream.done @description("New priority for the todo item (optional)")
   responseToUser string @stream.not_null @description("Your response to the users request")
 }
 
 class ChatTool {
-  action "chat"
+  action "chat" @stream.not_null
   responseToUser string @stream.not_null @description("Your response to the users request") 
 }
 
