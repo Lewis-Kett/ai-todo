@@ -4,9 +4,11 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card"
 import { ChatMessages } from "./ChatMessages"
 import { ChatInput } from "./ChatInput"
 import { useChatStream } from "./hooks/useChatStream"
+import { Button } from "../ui/button"
 
 export function ChatInterface() {
-  const { messages, isLoading, error, sendMessage, clearError } = useChatStream()
+  const { messages, isLoading, error, sendMessage, clearError } =
+    useChatStream()
 
   return (
     <Card className="flex flex-col h-[600px]">
@@ -34,12 +36,9 @@ export function ChatInterface() {
           <div className="p-4 bg-red-50 border-t border-red-200">
             <div className="flex justify-between items-center">
               <span className="text-sm text-red-700">{error}</span>
-              <button
-                onClick={clearError}
-                className="text-red-500 hover:text-red-700 text-sm underline"
-              >
+              <Button onClick={clearError} variant="destructive">
                 Dismiss
-              </button>
+              </Button>
             </div>
           </div>
         )}

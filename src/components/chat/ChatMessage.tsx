@@ -30,7 +30,7 @@ export const ChatMessage = memo(function ChatMessage({
           className={cn(
             "rounded-lg px-4 py-2 text-sm",
             isUser
-              ? "bg-primary text-primary-foreground"
+              ? "bg-primary text-foreground"
               : "bg-muted text-muted-foreground"
           )}
         >
