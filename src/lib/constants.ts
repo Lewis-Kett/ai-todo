@@ -1,0 +1,1 @@
+export const CHAT_ANIMATION_DURATION = 3000 // milliseconds

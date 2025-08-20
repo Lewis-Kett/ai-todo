@@ -8,9 +8,10 @@ import type { Message } from "@/baml_client/types"
 interface ChatMessagesProps {
   messages: Message[]
   isLoading?: boolean
+  streamingMessageId: string | null
 }
 
-export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
+export function ChatMessages({ messages, isLoading, streamingMessageId }: ChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -24,7 +25,11 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
     <ScrollArea className="h-full w-full">
       <div className="space-y-2 p-4">
         {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
+          <ChatMessage 
+            key={message.id} 
+            message={message} 
+            isStreaming={message.id === streamingMessageId}
+          />
         ))}
         {isLoading && (
           <div className="flex items-center space-x-2 text-muted-foreground">

@@ -7,7 +7,7 @@ import { useChatStream } from "./hooks/useChatStream"
 import { Button } from "../ui/button"
 
 export function ChatInterface() {
-  const { messages, isLoading, error, sendMessage, clearError } =
+  const { messages, isLoading, error, sendMessage, clearError, streamingMessageId } =
     useChatStream()
 
   return (
@@ -29,7 +29,7 @@ export function ChatInterface() {
           aria-labelledby="chat-heading"
           aria-label="Chat conversation"
         >
-          <ChatMessages messages={messages} isLoading={isLoading} />
+          <ChatMessages messages={messages} isLoading={isLoading} streamingMessageId={streamingMessageId} />
         </div>
 
         {error && (

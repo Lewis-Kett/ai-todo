@@ -23,7 +23,7 @@ describe('ChatMessage', () => {
     expect(screen.getByText('U')).toBeInTheDocument()
     
     const messageContent = screen.getByText('Hello, how are you?').parentElement
-    expect(messageContent).toHaveClass('bg-primary', 'text-primary-foreground')
+    expect(messageContent).toHaveClass('bg-primary', 'text-foreground')
   })
 
   it('renders assistant message with correct styling', () => {

@@ -1,16 +1,23 @@
 import { memo } from "react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useAnimatedText } from "@/hooks/useAnimatedText"
 import type { Message } from "@/baml_client/types"
 
 interface ChatMessageProps {
   message: Message
+  isStreaming?: boolean
 }
 
 export const ChatMessage = memo(function ChatMessage({
   message,
+  isStreaming = false,
 }: ChatMessageProps) {
   const isUser = message.role === "user"
+  const isAssistant = message.role === "assistant"
+  
+  const animatedContent = useAnimatedText(message.content)
+  const displayContent = isStreaming && isAssistant ? animatedContent : message.content
 
   return (
     <div
@@ -34,7 +41,7 @@ export const ChatMessage = memo(function ChatMessage({
               : "bg-muted text-muted-foreground"
           )}
         >
-          <p>{message.content}</p>
+          <p>{displayContent}</p>
         </div>
       </div>
     </div>

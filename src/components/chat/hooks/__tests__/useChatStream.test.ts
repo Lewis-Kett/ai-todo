@@ -98,8 +98,8 @@ describe('useChatStream', () => {
 
       mockStreamChatMessage.mockResolvedValue(createMockStream([mockResponse]))
       
-      const userMessage = createMockMessage('user', 'Hello')
-      const assistantMessage = createMockMessage('assistant', '')
+      const userMessage = createMockMessage('user', 'Hello', 'user-mock-id')
+      const assistantMessage = createMockMessage('assistant', '', 'assistant-mock-id')
       
       mockCreateMessage
         .mockReturnValueOnce(userMessage)
@@ -133,8 +133,8 @@ describe('useChatStream', () => {
       mockStreamChatMessage.mockResolvedValue(createMockStream([mockResponse]))
       mockProcessTodoAction.mockResolvedValue()
 
-      const userMessage = createMockMessage('user', 'Add a new task')
-      const assistantMessage = createMockMessage('assistant', '')
+      const userMessage = createMockMessage('user', 'Add a new task', 'user-mock-id-2')
+      const assistantMessage = createMockMessage('assistant', '', 'assistant-mock-id-2')
       
       mockCreateMessage
         .mockReturnValueOnce(userMessage)
@@ -162,8 +162,8 @@ describe('useChatStream', () => {
       mockStreamChatMessage.mockResolvedValue(createMockStream(responses))
       mockProcessTodoAction.mockResolvedValue()
 
-      const userMessage = createMockMessage('user', 'Create a task')
-      const assistantMessage = createMockMessage('assistant', '')
+      const userMessage = createMockMessage('user', 'Create a task', 'user-mock-id-3')
+      const assistantMessage = createMockMessage('assistant', '', 'assistant-mock-id-3')
       
       mockCreateMessage
         .mockReturnValueOnce(userMessage)
@@ -225,8 +225,8 @@ describe('useChatStream', () => {
       for (const response of testCases) {
         jest.clearAllMocks()
         mockCreateMessage
-          .mockReturnValueOnce(createMockMessage('user', 'test'))
-          .mockReturnValueOnce(createMockMessage('assistant', ''))
+          .mockReturnValueOnce(createMockMessage('user', 'test', `user-mock-id-${response.action}`))
+          .mockReturnValueOnce(createMockMessage('assistant', '', `assistant-mock-id-${response.action}`))
         
         mockStreamChatMessage.mockResolvedValue(createMockStream([response]))
         mockProcessTodoAction.mockResolvedValue()
@@ -267,8 +267,8 @@ describe('useChatStream', () => {
 
       mockStreamChatMessage.mockResolvedValue(errorStream)
 
-      const userMessage = createMockMessage('user', 'test')
-      const assistantMessage = createMockMessage('assistant', '')
+      const userMessage = createMockMessage('user', 'test', 'user-mock-id-stream-error')
+      const assistantMessage = createMockMessage('assistant', '', 'assistant-mock-id-stream-error')
       
       mockCreateMessage
         .mockReturnValueOnce(userMessage)
@@ -300,8 +300,8 @@ describe('useChatStream', () => {
       mockStreamChatMessage.mockResolvedValue(createMockStream([mockResponse]))
       mockProcessTodoAction.mockRejectedValue(new Error('Failed to add todo'))
 
-      const userMessage = createMockMessage('user', 'Add task')
-      const assistantMessage = createMockMessage('assistant', '')
+      const userMessage = createMockMessage('user', 'Add task', 'user-mock-id-process-error')
+      const assistantMessage = createMockMessage('assistant', '', 'assistant-mock-id-process-error')
       
       mockCreateMessage
         .mockReturnValueOnce(userMessage)
@@ -328,8 +328,8 @@ describe('useChatStream', () => {
 
       mockStreamChatMessage.mockResolvedValue(errorStream)
 
-      const userMessage = createMockMessage('user', 'test')
-      const assistantMessage = createMockMessage('assistant', '')
+      const userMessage = createMockMessage('user', 'test', 'user-mock-id-no-remove')
+      const assistantMessage = createMockMessage('assistant', '', 'assistant-mock-id-no-remove')
       
       mockCreateMessage
         .mockReturnValueOnce(userMessage)
@@ -397,8 +397,8 @@ describe('useChatStream', () => {
 
       mockStreamChatMessage.mockResolvedValue(createMockStream([mockResponse]))
       
-      const userMessage = createMockMessage('user', 'Test message')
-      const assistantMessage = createMockMessage('assistant', '')
+      const userMessage = createMockMessage('user', 'Test message', 'user-mock-id-update-content')
+      const assistantMessage = createMockMessage('assistant', '', 'assistant-mock-id-update-content')
       
       mockCreateMessage
         .mockReturnValueOnce(userMessage)
@@ -422,8 +422,8 @@ describe('useChatStream', () => {
 
       mockStreamChatMessage.mockResolvedValue(createMockStream(responses))
 
-      const userMessage = createMockMessage('user', 'test')
-      const assistantMessage = createMockMessage('assistant', '')
+      const userMessage = createMockMessage('user', 'test', 'user-mock-id-streaming-update')
+      const assistantMessage = createMockMessage('assistant', '', 'assistant-mock-id-streaming-update')
       
       mockCreateMessage
         .mockReturnValueOnce(userMessage)
@@ -446,6 +446,13 @@ describe('useChatStream', () => {
       }
 
       mockStreamChatMessage.mockResolvedValue(createMockStream([mockResponse]))
+      
+      const userMessage = createMockMessage('user', 'Test message', 'user-mock-id-add-state')
+      const assistantMessage = createMockMessage('assistant', '', 'assistant-mock-id-add-state')
+      
+      mockCreateMessage
+        .mockReturnValueOnce(userMessage)
+        .mockReturnValueOnce(assistantMessage)
 
       const { result } = renderHook(() => useChatStream())
 
