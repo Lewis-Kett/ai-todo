@@ -1,49 +1,58 @@
-import { AddTodoTool, DeleteTodoTool, ToggleTodoTool, UpdateTodoTool, ChatTool } from "@/baml_client/types"
-import { addTodo, deleteTodo, toggleTodoComplete, updateTodo } from "@/actions/todo-actions"
-import { Todo } from "@/types/todo"
-
-export type TodoActionResponse = AddTodoTool | DeleteTodoTool | ToggleTodoTool | UpdateTodoTool | ChatTool
+import { BatchTodoResponse } from "@/baml_client/types"
+import { partial_types } from "@/baml_client"
+import { processBatchTodoActions } from "@/actions/todo-actions"
 
 /**
- * Processes a todo action response by calling the appropriate server action.
- * This centralizes the logic for mapping BAML responses to server actions.
+ * Type guard to check if a BatchTodoResponse is complete and safe to process.
+ * After streaming completes with @stream.done, all required fields should be present.
  */
-export async function processTodoAction(response: TodoActionResponse): Promise<void> {
-  try {
-    switch (response.action) {
-      case "add_todo":
-        await addTodo({
-          name: response.name,
-          category: response.category,
-          priority: response.priority,
-        })
-        break
-
-      case "delete_todo":
-        await deleteTodo(response.id)
-        break
-
-      case "toggle_todo":
-        await toggleTodoComplete(response.id)
-        break
-
-      case "update_todo":
-        const updates: Partial<Omit<Todo, "id">> = {}
-        if (response.name) updates.name = response.name
-        if (response.category) updates.category = response.category
-        if (response.priority) updates.priority = response.priority
-        await updateTodo(response.id, updates)
-        break
-
-      case "chat":
-        // No action needed for chat responses
-        break
-
-      default:
-        console.warn("Unknown action type:", (response as { action: string }).action)
-    }
-  } catch (error) {
-    console.error("Error processing todo action:", error)
-    throw error
+function isCompleteBatchResponse(
+  response: BatchTodoResponse | partial_types.BatchTodoResponse
+): response is BatchTodoResponse {
+  // Check if actions array exists and all actions have required fields
+  if (!response.actions || !Array.isArray(response.actions)) {
+    return false
   }
+
+  // Check each action has its required fields based on action type
+  for (const action of response.actions) {
+    if (!action.action) return false
+
+    switch (action.action) {
+      case "add_todo":
+        if (!action.name || !action.category || !action.priority) return false
+        break
+      case "delete_todo":
+      case "toggle_todo":
+        if (!action.id) return false
+        break
+      case "update_todo":
+        if (!action.id) return false
+        break
+      case "chat":
+        // Chat tool only requires action field
+        break
+      default:
+        return false
+    }
+  }
+
+  return true
+}
+
+/**
+ * Processes a BatchTodoResponse by calling the appropriate server actions sequentially.
+ * This centralizes the logic for mapping BAML responses to server actions and avoids race conditions.
+ */
+export async function processBatchTodoResponse(
+  batchResponse: BatchTodoResponse | partial_types.BatchTodoResponse
+): Promise<void> {
+  // Type guard to ensure response is complete
+  if (!isCompleteBatchResponse(batchResponse)) {
+    throw new Error(
+      "BatchTodoResponse is not complete - streaming may not have finished"
+    )
+  }
+
+  await processBatchTodoActions(batchResponse.actions)
 }

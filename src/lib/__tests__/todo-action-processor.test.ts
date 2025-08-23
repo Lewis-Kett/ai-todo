@@ -1,299 +1,370 @@
 /**
  * Unit tests for todo-action-processor
  * 
- * Tests the processTodoAction function that maps BAML responses to server actions
+ * Tests the processBatchTodoResponse function that processes BAML batch responses
  */
 
-import { processTodoAction, TodoActionResponse } from '../todo-action-processor'
-import { AddTodoTool, DeleteTodoTool, ToggleTodoTool, UpdateTodoTool, ChatTool } from '@/baml_client/types'
+import { processBatchTodoResponse } from '../todo-action-processor'
+import { BatchTodoResponse } from '@/baml_client/types'
+import { partial_types } from '@/baml_client'
 
-// Mock all server actions
+// Mock the batch processor
 jest.mock('@/actions/todo-actions', () => ({
-  addTodo: jest.fn(),
-  deleteTodo: jest.fn(),
-  toggleTodoComplete: jest.fn(),
-  updateTodo: jest.fn(),
+  processBatchTodoActions: jest.fn(),
 }))
 
-// Import the mocked functions for testing
-import { addTodo, deleteTodo, toggleTodoComplete, updateTodo } from '@/actions/todo-actions'
+// Import the mocked function for testing
+import { processBatchTodoActions } from '@/actions/todo-actions'
 
 // Mock console methods to test logging
-const mockConsoleWarn = jest.spyOn(console, 'warn').mockImplementation()
-const mockConsoleError = jest.spyOn(console, 'error').mockImplementation()
+jest.spyOn(console, 'error').mockImplementation()
 
 describe('todo-action-processor', () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
 
-  describe('processTodoAction', () => {
-    describe('add_todo action', () => {
-      it('should call addTodo with correct parameters', async () => {
-        const response: AddTodoTool = {
-          action: 'add_todo',
-          name: 'Test Todo',
-          category: 'Work',
-          priority: 'High Priority',
+  describe('processBatchTodoResponse', () => {
+    describe('complete batch responses', () => {
+      beforeEach(() => {
+        // Ensure mock resolves for successful tests
+        ;(processBatchTodoActions as jest.Mock).mockResolvedValue(undefined)
+      })
+
+      it('should process batch response with single add_todo action', async () => {
+        const batchResponse: BatchTodoResponse = {
+          actions: [{
+            action: 'add_todo',
+            name: 'Test Todo',
+            category: 'Work',
+            priority: 'High Priority'
+          }],
           responseToUser: 'Todo added successfully'
         }
 
-        await processTodoAction(response)
+        await processBatchTodoResponse(batchResponse)
 
-        expect(addTodo).toHaveBeenCalledWith({
-          name: 'Test Todo',
-          category: 'Work',
-          priority: 'High Priority'
-        })
-        expect(addTodo).toHaveBeenCalledTimes(1)
+        expect(processBatchTodoActions).toHaveBeenCalledWith(batchResponse.actions)
+        expect(processBatchTodoActions).toHaveBeenCalledTimes(1)
       })
 
-      it('should handle all priority levels', async () => {
-        const priorities = ['High Priority', 'Medium Priority', 'Low Priority'] as const
-        
-        for (const priority of priorities) {
-          const response: AddTodoTool = {
-            action: 'add_todo',
-            name: `Test Todo ${priority}`,
-            category: 'Test',
-            priority,
-            responseToUser: 'Todo added'
-          }
-
-          await processTodoAction(response)
-
-          expect(addTodo).toHaveBeenCalledWith({
-            name: `Test Todo ${priority}`,
-            category: 'Test',
-            priority
-          })
+      it('should process batch response with multiple actions', async () => {
+        const batchResponse: BatchTodoResponse = {
+          actions: [
+            {
+              action: 'add_todo',
+              name: 'First Todo',
+              category: 'Work',
+              priority: 'High Priority'
+            },
+            {
+              action: 'delete_todo',
+              id: '123'
+            },
+            {
+              action: 'toggle_todo',
+              id: '456'
+            }
+          ],
+          responseToUser: 'All operations completed'
         }
-      })
-    })
 
-    describe('delete_todo action', () => {
-      it('should call deleteTodo with the correct ID', async () => {
-        const response: DeleteTodoTool = {
-          action: 'delete_todo',
-          id: 'test-todo-123',
+        await processBatchTodoResponse(batchResponse)
+
+        expect(processBatchTodoActions).toHaveBeenCalledWith(batchResponse.actions)
+        expect(processBatchTodoActions).toHaveBeenCalledTimes(1)
+      })
+
+      it('should process batch response with delete_todo action', async () => {
+        const batchResponse: BatchTodoResponse = {
+          actions: [{
+            action: 'delete_todo',
+            id: 'test-id-123'
+          }],
           responseToUser: 'Todo deleted successfully'
         }
 
-        await processTodoAction(response)
+        await processBatchTodoResponse(batchResponse)
 
-        expect(deleteTodo).toHaveBeenCalledWith('test-todo-123')
-        expect(deleteTodo).toHaveBeenCalledTimes(1)
+        expect(processBatchTodoActions).toHaveBeenCalledWith(batchResponse.actions)
       })
-    })
 
-    describe('toggle_todo action', () => {
-      it('should call toggleTodoComplete with the correct ID', async () => {
-        const response: ToggleTodoTool = {
-          action: 'toggle_todo',
-          id: 'test-todo-456',
+      it('should process batch response with toggle_todo action', async () => {
+        const batchResponse: BatchTodoResponse = {
+          actions: [{
+            action: 'toggle_todo',
+            id: 'test-id-456'
+          }],
           responseToUser: 'Todo toggled successfully'
         }
 
-        await processTodoAction(response)
+        await processBatchTodoResponse(batchResponse)
 
-        expect(toggleTodoComplete).toHaveBeenCalledWith('test-todo-456')
-        expect(toggleTodoComplete).toHaveBeenCalledTimes(1)
+        expect(processBatchTodoActions).toHaveBeenCalledWith(batchResponse.actions)
+      })
+
+      it('should process batch response with update_todo action (all fields)', async () => {
+        const batchResponse: BatchTodoResponse = {
+          actions: [{
+            action: 'update_todo',
+            id: 'test-id-789',
+            name: 'Updated Todo',
+            category: 'Personal',
+            priority: 'Medium Priority'
+          }],
+          responseToUser: 'Todo updated successfully'
+        }
+
+        await processBatchTodoResponse(batchResponse)
+
+        expect(processBatchTodoActions).toHaveBeenCalledWith(batchResponse.actions)
+      })
+
+      it('should process batch response with update_todo action (partial fields)', async () => {
+        const batchResponse: BatchTodoResponse = {
+          actions: [{
+            action: 'update_todo',
+            id: 'test-id-789',
+            name: 'Updated Name Only'
+          }],
+          responseToUser: 'Todo name updated successfully'
+        }
+
+        await processBatchTodoResponse(batchResponse)
+
+        expect(processBatchTodoActions).toHaveBeenCalledWith(batchResponse.actions)
+      })
+
+      it('should process batch response with chat action only', async () => {
+        const batchResponse: BatchTodoResponse = {
+          actions: [{
+            action: 'chat'
+          }],
+          responseToUser: 'Just chatting, no todos to process'
+        }
+
+        await processBatchTodoResponse(batchResponse)
+
+        expect(processBatchTodoActions).toHaveBeenCalledWith(batchResponse.actions)
+      })
+
+      it('should process batch response with mixed actions including chat', async () => {
+        const batchResponse: BatchTodoResponse = {
+          actions: [
+            {
+              action: 'add_todo',
+              name: 'New Task',
+              category: 'Work',
+              priority: 'High Priority'
+            },
+            {
+              action: 'chat'
+            },
+            {
+              action: 'delete_todo',
+              id: '123'
+            }
+          ],
+          responseToUser: 'Added task and deleted another one'
+        }
+
+        await processBatchTodoResponse(batchResponse)
+
+        expect(processBatchTodoActions).toHaveBeenCalledWith(batchResponse.actions)
       })
     })
 
-    describe('update_todo action', () => {
-      it('should call updateTodo with only name update', async () => {
-        const response: UpdateTodoTool = {
-          action: 'update_todo',
-          id: 'test-todo-789',
-          name: 'Updated Todo Name',
-          category: null,
-          priority: null,
-          responseToUser: 'Todo updated successfully'
-        }
-
-        await processTodoAction(response)
-
-        expect(updateTodo).toHaveBeenCalledWith('test-todo-789', {
-          name: 'Updated Todo Name'
-        })
-        expect(updateTodo).toHaveBeenCalledTimes(1)
-      })
-
-      it('should call updateTodo with only category update', async () => {
-        const response: UpdateTodoTool = {
-          action: 'update_todo',
-          id: 'test-todo-789',
-          name: null,
-          category: 'Updated Category',
-          priority: null,
-          responseToUser: 'Todo updated successfully'
-        }
-
-        await processTodoAction(response)
-
-        expect(updateTodo).toHaveBeenCalledWith('test-todo-789', {
-          category: 'Updated Category'
-        })
-      })
-
-      it('should call updateTodo with only priority update', async () => {
-        const response: UpdateTodoTool = {
-          action: 'update_todo',
-          id: 'test-todo-789',
-          name: null,
-          category: null,
-          priority: 'Low Priority',
-          responseToUser: 'Todo updated successfully'
-        }
-
-        await processTodoAction(response)
-
-        expect(updateTodo).toHaveBeenCalledWith('test-todo-789', {
-          priority: 'Low Priority'
-        })
-      })
-
-      it('should call updateTodo with multiple field updates', async () => {
-        const response: UpdateTodoTool = {
-          action: 'update_todo',
-          id: 'test-todo-789',
-          name: 'Multi-Update Todo',
-          category: 'Updated Category',
-          priority: 'High Priority',
-          responseToUser: 'Todo updated successfully'
-        }
-
-        await processTodoAction(response)
-
-        expect(updateTodo).toHaveBeenCalledWith('test-todo-789', {
-          name: 'Multi-Update Todo',
-          category: 'Updated Category',
-          priority: 'High Priority'
-        })
-      })
-
-      it('should handle undefined optional fields correctly', async () => {
-        const response: UpdateTodoTool = {
-          action: 'update_todo',
-          id: 'test-todo-789',
-          responseToUser: 'Todo updated successfully'
-        }
-
-        await processTodoAction(response)
-
-        expect(updateTodo).toHaveBeenCalledWith('test-todo-789', {})
-      })
-
-      it('should exclude null values from updates object', async () => {
-        const response: UpdateTodoTool = {
-          action: 'update_todo',
-          id: 'test-todo-789',
-          name: 'Updated Name',
-          category: null,
-          priority: null,
-          responseToUser: 'Todo updated successfully'
-        }
-
-        await processTodoAction(response)
-
-        expect(updateTodo).toHaveBeenCalledWith('test-todo-789', {
-          name: 'Updated Name'
-        })
-      })
-    })
-
-    describe('chat action', () => {
-      it('should not call any server actions for chat responses', async () => {
-        const response: ChatTool = {
-          action: 'chat',
-          responseToUser: 'This is a chat response'
-        }
-
-        await processTodoAction(response)
-
-        expect(addTodo).not.toHaveBeenCalled()
-        expect(deleteTodo).not.toHaveBeenCalled()
-        expect(toggleTodoComplete).not.toHaveBeenCalled()
-        expect(updateTodo).not.toHaveBeenCalled()
-      })
-    })
-
-    describe('unknown action type', () => {
-      it('should log a warning for unknown action types', async () => {
-        const response = {
-          action: 'unknown_action',
-          responseToUser: 'Unknown response'
-        } as unknown as TodoActionResponse
-
-        await processTodoAction(response)
-
-        expect(mockConsoleWarn).toHaveBeenCalledWith('Unknown action type:', 'unknown_action')
-        expect(addTodo).not.toHaveBeenCalled()
-        expect(deleteTodo).not.toHaveBeenCalled()
-        expect(toggleTodoComplete).not.toHaveBeenCalled()
-        expect(updateTodo).not.toHaveBeenCalled()
-      })
-    })
-
-    describe('error handling', () => {
-      it('should catch and re-throw errors from addTodo', async () => {
-        const testError = new Error('Add todo failed')
-        ;(addTodo as jest.Mock).mockRejectedValueOnce(testError)
-
-        const response: AddTodoTool = {
-          action: 'add_todo',
-          name: 'Test Todo',
-          category: 'Test',
-          priority: 'Medium Priority',
+    describe('incomplete batch responses', () => {
+      it('should throw error for incomplete add_todo action (missing name)', async () => {
+        const incompleteResponse = {
+          actions: [{
+            action: 'add_todo',
+            category: 'Work',
+            priority: 'High Priority'
+            // missing name
+          }],
           responseToUser: 'Todo added'
-        }
+        } as partial_types.BatchTodoResponse
 
-        await expect(processTodoAction(response)).rejects.toThrow('Add todo failed')
-        expect(mockConsoleError).toHaveBeenCalledWith('Error processing todo action:', testError)
+        await expect(processBatchTodoResponse(incompleteResponse))
+          .rejects.toThrow('BatchTodoResponse is not complete - streaming may not have finished')
+
+        expect(processBatchTodoActions).not.toHaveBeenCalled()
       })
 
-      it('should catch and re-throw errors from deleteTodo', async () => {
-        const testError = new Error('Delete todo failed')
-        ;(deleteTodo as jest.Mock).mockRejectedValueOnce(testError)
+      it('should throw error for incomplete add_todo action (missing category)', async () => {
+        const incompleteResponse = {
+          actions: [{
+            action: 'add_todo',
+            name: 'Test Todo',
+            priority: 'High Priority'
+            // missing category
+          }],
+          responseToUser: 'Todo added'
+        } as partial_types.BatchTodoResponse
 
-        const response: DeleteTodoTool = {
-          action: 'delete_todo',
-          id: 'test-id',
+        await expect(processBatchTodoResponse(incompleteResponse))
+          .rejects.toThrow('BatchTodoResponse is not complete - streaming may not have finished')
+
+        expect(processBatchTodoActions).not.toHaveBeenCalled()
+      })
+
+      it('should throw error for incomplete add_todo action (missing priority)', async () => {
+        const incompleteResponse = {
+          actions: [{
+            action: 'add_todo',
+            name: 'Test Todo',
+            category: 'Work'
+            // missing priority
+          }],
+          responseToUser: 'Todo added'
+        } as partial_types.BatchTodoResponse
+
+        await expect(processBatchTodoResponse(incompleteResponse))
+          .rejects.toThrow('BatchTodoResponse is not complete - streaming may not have finished')
+
+        expect(processBatchTodoActions).not.toHaveBeenCalled()
+      })
+
+      it('should throw error for incomplete delete_todo action (missing id)', async () => {
+        const incompleteResponse = {
+          actions: [{
+            action: 'delete_todo'
+            // missing id
+          }],
           responseToUser: 'Todo deleted'
-        }
+        } as partial_types.BatchTodoResponse
 
-        await expect(processTodoAction(response)).rejects.toThrow('Delete todo failed')
-        expect(mockConsoleError).toHaveBeenCalledWith('Error processing todo action:', testError)
+        await expect(processBatchTodoResponse(incompleteResponse))
+          .rejects.toThrow('BatchTodoResponse is not complete - streaming may not have finished')
+
+        expect(processBatchTodoActions).not.toHaveBeenCalled()
       })
 
-      it('should catch and re-throw errors from toggleTodoComplete', async () => {
-        const testError = new Error('Toggle todo failed')
-        ;(toggleTodoComplete as jest.Mock).mockRejectedValueOnce(testError)
-
-        const response: ToggleTodoTool = {
-          action: 'toggle_todo',
-          id: 'test-id',
+      it('should throw error for incomplete toggle_todo action (missing id)', async () => {
+        const incompleteResponse = {
+          actions: [{
+            action: 'toggle_todo'
+            // missing id
+          }],
           responseToUser: 'Todo toggled'
-        }
+        } as partial_types.BatchTodoResponse
 
-        await expect(processTodoAction(response)).rejects.toThrow('Toggle todo failed')
-        expect(mockConsoleError).toHaveBeenCalledWith('Error processing todo action:', testError)
+        await expect(processBatchTodoResponse(incompleteResponse))
+          .rejects.toThrow('BatchTodoResponse is not complete - streaming may not have finished')
+
+        expect(processBatchTodoActions).not.toHaveBeenCalled()
       })
 
-      it('should catch and re-throw errors from updateTodo', async () => {
-        const testError = new Error('Update todo failed')
-        ;(updateTodo as jest.Mock).mockRejectedValueOnce(testError)
-
-        const response: UpdateTodoTool = {
-          action: 'update_todo',
-          id: 'test-id',
-          name: 'Updated Name',
+      it('should throw error for incomplete update_todo action (missing id)', async () => {
+        const incompleteResponse = {
+          actions: [{
+            action: 'update_todo',
+            name: 'Updated Todo'
+            // missing id
+          }],
           responseToUser: 'Todo updated'
+        } as partial_types.BatchTodoResponse
+
+        await expect(processBatchTodoResponse(incompleteResponse))
+          .rejects.toThrow('BatchTodoResponse is not complete - streaming may not have finished')
+
+        expect(processBatchTodoActions).not.toHaveBeenCalled()
+      })
+
+      it('should throw error for missing actions array', async () => {
+        const incompleteResponse = {
+          responseToUser: 'Something happened'
+          // missing actions
+        } as partial_types.BatchTodoResponse
+
+        await expect(processBatchTodoResponse(incompleteResponse))
+          .rejects.toThrow('BatchTodoResponse is not complete - streaming may not have finished')
+
+        expect(processBatchTodoActions).not.toHaveBeenCalled()
+      })
+
+      it('should throw error for empty actions array that is not an array', async () => {
+        const incompleteResponse = {
+          actions: null,
+          responseToUser: 'Something happened'
+        } as any as partial_types.BatchTodoResponse
+
+        await expect(processBatchTodoResponse(incompleteResponse))
+          .rejects.toThrow('BatchTodoResponse is not complete - streaming may not have finished')
+
+        expect(processBatchTodoActions).not.toHaveBeenCalled()
+      })
+
+      it('should throw error for action without action field', async () => {
+        const incompleteResponse = {
+          actions: [{
+            name: 'Test Todo',
+            category: 'Work',
+            priority: 'High Priority'
+            // missing action field
+          } as any],
+          responseToUser: 'Something happened'
+        } as partial_types.BatchTodoResponse
+
+        await expect(processBatchTodoResponse(incompleteResponse))
+          .rejects.toThrow('BatchTodoResponse is not complete - streaming may not have finished')
+
+        expect(processBatchTodoActions).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('error handling from processBatchTodoActions', () => {
+      it('should propagate errors from processBatchTodoActions', async () => {
+        const batchResponse: BatchTodoResponse = {
+          actions: [{
+            action: 'add_todo',
+            name: 'Test Todo',
+            category: 'Work',
+            priority: 'High Priority'
+          }],
+          responseToUser: 'Todo added successfully'
         }
 
-        await expect(processTodoAction(response)).rejects.toThrow('Update todo failed')
-        expect(mockConsoleError).toHaveBeenCalledWith('Error processing todo action:', testError)
+        const testError = new Error('Failed to process batch actions')
+        ;(processBatchTodoActions as jest.Mock).mockRejectedValue(testError)
+
+        await expect(processBatchTodoResponse(batchResponse))
+          .rejects.toThrow('Failed to process batch actions')
+
+        expect(processBatchTodoActions).toHaveBeenCalledWith(batchResponse.actions)
+      })
+    })
+
+    describe('edge cases', () => {
+      beforeEach(() => {
+        // Reset mock to resolve for edge cases
+        ;(processBatchTodoActions as jest.Mock).mockResolvedValue(undefined)
+      })
+
+      it('should process batch response with empty actions array', async () => {
+        const batchResponse: BatchTodoResponse = {
+          actions: [],
+          responseToUser: 'No actions to process'
+        }
+
+        await processBatchTodoResponse(batchResponse)
+
+        expect(processBatchTodoActions).toHaveBeenCalledWith([])
+      })
+
+      it('should process batch response with only chat actions', async () => {
+        const batchResponse: BatchTodoResponse = {
+          actions: [
+            { action: 'chat' },
+            { action: 'chat' }
+          ],
+          responseToUser: 'Just having a conversation'
+        }
+
+        await processBatchTodoResponse(batchResponse)
+
+        expect(processBatchTodoActions).toHaveBeenCalledWith(batchResponse.actions)
       })
     })
   })

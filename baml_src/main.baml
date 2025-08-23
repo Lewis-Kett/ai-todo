@@ -20,19 +20,16 @@ class AddTodoTool {
   name string @stream.done @description("The todo item name")
   category string @stream.done @description("Category like Work, Personal, etc.")
   priority "High Priority" | "Medium Priority" | "Low Priority" @stream.done
-  responseToUser string @stream.not_null @description("Your response to the users request") 
 }
 
 class DeleteTodoTool {
   action "delete_todo" @stream.not_null
   id string @stream.done @description("The ID of the todo item to delete")
-  responseToUser string @stream.not_null @description("Your response to the users request")
 }
 
 class ToggleTodoTool {
   action "toggle_todo" @stream.not_null
   id string @stream.done @description("The ID of the todo item to toggle completion status")
-  responseToUser string @stream.not_null @description("Your response to the users request")
 }
 
 class UpdateTodoTool {
@@ -41,12 +38,15 @@ class UpdateTodoTool {
   name string? @stream.done @description("New name for the todo item (optional)")
   category string? @stream.done @description("New category for the todo item (optional)")
   priority ("High Priority" | "Medium Priority" | "Low Priority")? @stream.done @description("New priority for the todo item (optional)")
-  responseToUser string @stream.not_null @description("Your response to the users request")
 }
 
 class ChatTool {
   action "chat" @stream.not_null
-  responseToUser string @stream.not_null @description("Your response to the users request") 
+}
+
+class BatchTodoResponse {
+  actions (AddTodoTool | DeleteTodoTool | ToggleTodoTool | UpdateTodoTool | ChatTool)[] @stream.done @description("Array of actions to perform")
+  responseToUser string @stream.not_null @description("Your consolidated response to the user")
 }
 
 // Configure LLM Client
@@ -66,7 +66,7 @@ function HandleTodoRequest(
   user_message: string,
   current_todos: TodoItem[],
   conversation_history: Message[]?
-) -> AddTodoTool | DeleteTodoTool | ToggleTodoTool | UpdateTodoTool | ChatTool {
+) -> BatchTodoResponse {
   client GPT4
   prompt #"
     You are a helpful AI assistant for a todo application. 
@@ -79,13 +79,14 @@ function HandleTodoRequest(
     {% endfor %}
     {% endif %}
     
-    Analyze the user's message and determine what they want to do.
+    Analyze the user's message and determine what actions to perform. You can perform multiple todo actions in a single request.
     
-    If they want to ADD/CREATE a new todo item, use AddTodoTool.
-    If they want to DELETE/REMOVE a todo item, use DeleteTodoTool (specify the ID).
-    If they want to TOGGLE/COMPLETE/MARK a todo item, use ToggleTodoTool (specify the ID).
-    If they want to UPDATE/EDIT/MODIFY a todo item, use UpdateTodoTool (specify the ID and fields to update).
-    If they just want to chat/analyze/get advice, use ChatTool.
+    Available actions for the actions array:
+    - AddTodoTool: For creating new todo items
+    - DeleteTodoTool: For removing todo items (specify the ID)
+    - ToggleTodoTool: For marking items complete/incomplete (specify the ID)
+    - UpdateTodoTool: For modifying existing items (specify the ID and fields to update)
+    - ChatTool: For general chat/advice (when no todo actions are needed)
 
     Current todos:
     {% for todo in current_todos %}
@@ -97,13 +98,21 @@ function HandleTodoRequest(
     {{ ctx.output_format() }}
 
     Guidelines:
+    - Put all actions in the actions array, even for single requests
+    - For batch requests, identify all actions and return them in logical order
     - For AddTodoTool: Extract name, determine appropriate category and priority
     - For DeleteTodoTool: Use the exact ID from the todo list above
     - For ToggleTodoTool: Use the exact ID from the todo list above  
     - For UpdateTodoTool: Use the exact ID from the todo list above and specify which fields to update
-    - For ChatTool: Provide a helpful response regarding the users query
+    - For ChatTool: Use when only providing general chat/advice
     - Priority levels: "High Priority" for urgent/critical, "Medium Priority" for important, "Low Priority" for non-urgent
     - Common categories: Work, Personal, Health, Learning, Shopping, General
+    - Provide a single consolidated responseToUser that addresses the user's request
+    
+    Examples:
+    - "Add milk to shopping list" -> actions: [AddTodoTool], responseToUser: "I've added milk to your shopping list."
+    - "Mark task 1 complete and add bread" -> actions: [ToggleTodoTool, AddTodoTool], responseToUser: "I've marked task 1 as complete and added bread to your list."
+    - "How are you doing?" -> actions: [ChatTool], responseToUser: "I'm doing well, thank you for asking!"
   "#
 }
 

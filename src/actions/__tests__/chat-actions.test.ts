@@ -1,6 +1,6 @@
 import { streamChatMessage } from '../chat-actions'
 import { b } from '@/baml_client'
-import { Message } from '@/baml_client/types'
+import { Message, BatchTodoResponse } from '@/baml_client/types'
 import { Todo } from '@/types/todo'
 import { getTodos } from '../todo-actions'
 
@@ -22,13 +22,20 @@ jest.mock('@/baml_client', () => ({
 const mockGetTodos = getTodos as jest.MockedFunction<typeof getTodos>
 const mockBAMLStream = b.stream.HandleTodoRequest as jest.MockedFunction<typeof b.stream.HandleTodoRequest>
 
-// Helper to create a mock async generator from responses
-function createMockStream(responses: any[]) {
-  return (async function* () {
-    for (const response of responses) {
-      yield response
-    }
+// Helper to create a mock BAML stream from batch responses
+function createMockStream(batchResponse: BatchTodoResponse): any {
+  const stream = (async function* () {
+    yield batchResponse
   })()
+  
+  // Add the required BAML stream properties to make TypeScript happy
+  return Object.assign(stream, {
+    ffiStream: {},
+    partialCoerce: () => {},
+    finalCoerce: () => {},
+    ctxManager: {},
+    // Add other BAML stream properties that might be needed
+  })
 }
 
 describe('streamChatMessage', () => {
@@ -52,251 +59,441 @@ describe('streamChatMessage', () => {
   })
 
   describe('successful streaming operations', () => {
-    it('should stream add_todo responses', async () => {
-      const mockResponse = {
-        action: 'add_todo',
-        name: 'New task',
-        category: 'Personal',
-        priority: 'Medium Priority',
+    it('should stream add_todo batch responses', async () => {
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [{
+          action: 'add_todo',
+          name: 'New task',
+          category: 'Personal',
+          priority: 'Medium Priority'
+        }],
         responseToUser: 'Added your task!'
       }
-      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
 
       const messages: Message[] = []
       const stream = await streamChatMessage('Add a new task', messages)
 
       // Verify getTodos is called to fetch current state
       expect(mockGetTodos).toHaveBeenCalledTimes(1)
-      
-      // Verify BAML stream is called with current todos (not empty array)
-      expect(mockBAMLStream).toHaveBeenCalledWith('Add a new task', mockTodos, messages)
 
-      // Collect streamed responses
+      // Verify BAML stream is called with correct parameters
+      expect(mockBAMLStream).toHaveBeenCalledWith(
+        'Add a new task',
+        mockTodos,
+        messages
+      )
+
+      // Consume stream and verify responses
       const responses = []
       for await (const response of stream) {
         responses.push(response)
       }
 
-      expect(responses).toEqual([mockResponse])
+      expect(responses).toHaveLength(1)
+      expect(responses[0]).toEqual(mockBatchResponse)
     })
 
-    it('should stream delete_todo responses', async () => {
-      const mockResponse = {
-        action: 'delete_todo',
-        id: '1',
-        responseToUser: 'Task deleted!'
+    it('should stream delete_todo batch responses', async () => {
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [{
+          action: 'delete_todo',
+          id: '1'
+        }],
+        responseToUser: 'Deleted your task!'
       }
-      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
 
       const messages: Message[] = []
-      const stream = await streamChatMessage('Delete the first task', messages)
+      const stream = await streamChatMessage('Delete task 1', messages)
 
-      const responses = []
-      for await (const response of stream) {
-        responses.push(response)
-      }
-
-      expect(responses).toEqual([mockResponse])
-      expect(mockBAMLStream).toHaveBeenCalledWith('Delete the first task', mockTodos, messages)
-    })
-
-    it('should stream toggle_todo responses', async () => {
-      const mockResponse = {
-        action: 'toggle_todo',
-        id: '1',
-        responseToUser: 'Task completed!'
-      }
-      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
-
-      const messages: Message[] = []
-      const stream = await streamChatMessage('Toggle the task', messages)
-
-      const responses = []
-      for await (const response of stream) {
-        responses.push(response)
-      }
-
-      expect(responses).toEqual([mockResponse])
-      expect(mockBAMLStream).toHaveBeenCalledWith('Toggle the task', mockTodos, messages)
-    })
-
-    it('should stream update_todo responses', async () => {
-      const mockResponse = {
-        action: 'update_todo',
-        id: '1',
-        name: 'Updated task name',
-        category: 'New category',
-        priority: 'High Priority',
-        responseToUser: 'Task updated!'
-      }
-      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
-
-      const messages: Message[] = []
-      const stream = await streamChatMessage('Update the task', messages)
-
-      const responses = []
-      for await (const response of stream) {
-        responses.push(response)
-      }
-
-      expect(responses).toEqual([mockResponse])
-      expect(mockBAMLStream).toHaveBeenCalledWith('Update the task', mockTodos, messages)
-    })
-
-    it('should stream chat responses', async () => {
-      const mockResponse = {
-        action: 'chat',
-        responseToUser: 'Here is some helpful advice...'
-      }
-      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
-
-      const messages: Message[] = []
-      const stream = await streamChatMessage('Give me advice', messages)
-
-      const responses = []
-      for await (const response of stream) {
-        responses.push(response)
-      }
-
-      expect(responses).toEqual([mockResponse])
       expect(mockGetTodos).toHaveBeenCalledTimes(1)
-      expect(mockBAMLStream).toHaveBeenCalledWith('Give me advice', mockTodos, messages)
-    })
-  })
+      expect(mockBAMLStream).toHaveBeenCalledWith(
+        'Delete task 1',
+        mockTodos,
+        messages
+      )
 
-  describe('multiple streaming responses', () => {
-    it('should stream multiple responses in sequence', async () => {
-      const responses = [
-        { action: 'chat', responseToUser: 'Processing...' },
-        { action: 'add_todo', name: 'New task', category: 'Work', priority: 'High Priority', responseToUser: 'Task added!' }
-      ]
-      mockBAMLStream.mockReturnValue(createMockStream(responses))
-
-      const stream = await streamChatMessage('Add a work task', [])
-
-      const streamedResponses = []
+      // Consume stream and verify responses
+      const responses = []
       for await (const response of stream) {
-        streamedResponses.push(response)
+        responses.push(response)
       }
 
-      expect(streamedResponses).toEqual(responses)
+      expect(responses).toHaveLength(1)
+      expect(responses[0]).toEqual(mockBatchResponse)
     })
-  })
 
-  describe('conversation history handling', () => {
-    it('should pass conversation history to BAML stream', async () => {
-      const conversationHistory: Message[] = [
-        { id: '1', role: 'user', content: 'Previous user message' },
-        { id: '2', role: 'assistant', content: 'Previous assistant response' }
-      ]
-      
-      const mockResponse = {
-        action: 'chat',
-        responseToUser: 'Based on our previous conversation...'
+    it('should stream toggle_todo batch responses', async () => {
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [{
+          action: 'toggle_todo',
+          id: '1'
+        }],
+        responseToUser: 'Toggled your task!'
       }
-      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
 
-      await streamChatMessage('Continue our discussion', conversationHistory)
+      const messages: Message[] = []
+      const stream = await streamChatMessage('Toggle task 1', messages)
+
+      expect(mockGetTodos).toHaveBeenCalledTimes(1)
+      expect(mockBAMLStream).toHaveBeenCalledWith(
+        'Toggle task 1',
+        mockTodos,
+        messages
+      )
+
+      // Consume stream and verify responses
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
+
+      expect(responses).toHaveLength(1)
+      expect(responses[0]).toEqual(mockBatchResponse)
+    })
+
+    it('should stream update_todo batch responses', async () => {
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [{
+          action: 'update_todo',
+          id: '1',
+          name: 'Updated task',
+          category: 'Personal',
+          priority: 'Low Priority'
+        }],
+        responseToUser: 'Updated your task!'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
+
+      const messages: Message[] = []
+      const stream = await streamChatMessage('Update task 1', messages)
+
+      expect(mockGetTodos).toHaveBeenCalledTimes(1)
+      expect(mockBAMLStream).toHaveBeenCalledWith(
+        'Update task 1',
+        mockTodos,
+        messages
+      )
+
+      // Consume stream and verify responses
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
+
+      expect(responses).toHaveLength(1)
+      expect(responses[0]).toEqual(mockBatchResponse)
+    })
+
+    it('should stream batch responses with multiple actions', async () => {
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [
+          {
+            action: 'add_todo',
+            name: 'First task',
+            category: 'Work',
+            priority: 'High Priority'
+          },
+          {
+            action: 'add_todo',
+            name: 'Second task',
+            category: 'Personal',
+            priority: 'Medium Priority'
+          }
+        ],
+        responseToUser: 'Added both tasks!'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
+
+      const messages: Message[] = []
+      const stream = await streamChatMessage('Add two tasks', messages)
+
+      expect(mockGetTodos).toHaveBeenCalledTimes(1)
+      expect(mockBAMLStream).toHaveBeenCalledWith(
+        'Add two tasks',
+        mockTodos,
+        messages
+      )
+
+      // Consume stream and verify responses
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
+
+      expect(responses).toHaveLength(1)
+      expect(responses[0]).toEqual(mockBatchResponse)
+    })
+
+    it('should stream chat batch responses', async () => {
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [{
+          action: 'chat'
+        }],
+        responseToUser: 'How can I help you today?'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
+
+      const messages: Message[] = []
+      const stream = await streamChatMessage('Hello', messages)
+
+      expect(mockGetTodos).toHaveBeenCalledTimes(1)
+      expect(mockBAMLStream).toHaveBeenCalledWith(
+        'Hello',
+        mockTodos,
+        messages
+      )
+
+      // Consume stream and verify responses
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
+
+      expect(responses).toHaveLength(1)
+      expect(responses[0]).toEqual(mockBatchResponse)
+    })
+
+    it('should handle streaming multiple responses', async () => {
+      const responses = [
+        {
+          actions: [{ action: 'chat' }],
+          responseToUser: 'Working on it...'
+        },
+        {
+          actions: [{
+            action: 'add_todo',
+            name: 'New task',
+            category: 'Work',
+            priority: 'High Priority'
+          }],
+          responseToUser: 'Task added successfully!'
+        }
+      ]
+
+      const streamGenerator = (async function* () {
+        for (const response of responses) {
+          yield response as BatchTodoResponse
+        }
+      })()
+
+      // Add BAML stream properties
+      const mockStream = Object.assign(streamGenerator, {
+        ffiStream: {},
+        partialCoerce: () => {},
+        finalCoerce: () => {},
+        ctxManager: {},
+      })
+
+      mockBAMLStream.mockReturnValue(mockStream)
+
+      const messages: Message[] = []
+      const stream = await streamChatMessage('Add a task', messages)
+
+      // Consume stream and verify all responses
+      const collectedResponses = []
+      for await (const response of stream) {
+        collectedResponses.push(response)
+      }
+
+      expect(collectedResponses).toHaveLength(2)
+      expect(collectedResponses[0]).toEqual(responses[0])
+      expect(collectedResponses[1]).toEqual(responses[1])
+    })
+
+    it('should pass conversation history to BAML', async () => {
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [{ action: 'chat' }],
+        responseToUser: 'Response'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
+
+      const messages: Message[] = [
+        { id: '1', role: 'user', content: 'Previous message' },
+        { id: '2', role: 'assistant', content: 'Previous response' }
+      ]
+
+      await streamChatMessage('Current message', messages)
 
       expect(mockBAMLStream).toHaveBeenCalledWith(
-        'Continue our discussion',
+        'Current message',
         mockTodos,
-        conversationHistory
+        messages
       )
     })
 
     it('should handle empty conversation history', async () => {
-      const mockResponse = {
-        action: 'chat',
-        responseToUser: 'Hello! How can I help?'
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [{ action: 'chat' }],
+        responseToUser: 'Response'
       }
-      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
 
-      await streamChatMessage('Hello', [])
+      await streamChatMessage('First message', [])
 
-      expect(mockBAMLStream).toHaveBeenCalledWith('Hello', mockTodos, [])
+      expect(mockBAMLStream).toHaveBeenCalledWith(
+        'First message',
+        mockTodos,
+        []
+      )
     })
   })
 
   describe('error handling', () => {
-    it('should throw error when getTodos fails', async () => {
+    it('should handle getTodos errors', async () => {
       mockGetTodos.mockRejectedValue(new Error('Database error'))
 
-      await expect(streamChatMessage('Add a task', [])).rejects.toThrow(
-        'Sorry, I encountered an error processing your request.'
-      )
+      await expect(streamChatMessage('Test message', []))
+        .rejects.toThrow('Sorry, I encountered an error processing your request.')
+
+      expect(mockGetTodos).toHaveBeenCalledTimes(1)
+      expect(mockBAMLStream).not.toHaveBeenCalled()
     })
 
-    it('should throw error when BAML stream fails', async () => {
+    it('should handle BAML stream creation errors', async () => {
       mockBAMLStream.mockImplementation(() => {
-        throw new Error('BAML API error')
+        throw new Error('BAML stream error')
       })
 
-      await expect(streamChatMessage('Test message', [])).rejects.toThrow(
-        'Sorry, I encountered an error processing your request.'
-      )
+      await expect(streamChatMessage('Test message', []))
+        .rejects.toThrow('Sorry, I encountered an error processing your request.')
+
+      expect(mockGetTodos).toHaveBeenCalledTimes(1)
+      expect(mockBAMLStream).toHaveBeenCalledTimes(1)
     })
 
-    it('should handle streaming errors gracefully', async () => {
+    it('should handle streaming errors during iteration', async () => {
       const errorStream = (async function* () {
-        yield { action: 'chat', responseToUser: 'Starting...' }
+        yield {
+          actions: [{ action: 'chat' }],
+          responseToUser: 'Starting...'
+        } as BatchTodoResponse
         throw new Error('Stream interrupted')
       })()
-      
-      mockBAMLStream.mockReturnValue(errorStream)
 
-      const stream = await streamChatMessage('Test', [])
-      
+      // Add BAML stream properties
+      const mockErrorStream = Object.assign(errorStream, {
+        ffiStream: {},
+        partialCoerce: () => {},
+        finalCoerce: () => {},
+        ctxManager: {},
+      })
+
+      mockBAMLStream.mockReturnValue(mockErrorStream)
+
+      const stream = await streamChatMessage('Test message', [])
+
+      // Should be able to get the stream but error during iteration
+      expect(stream).toBeDefined()
+
+      // Consuming the stream should throw
+      const responses = []
       await expect(async () => {
-        const responses = []
         for await (const response of stream) {
           responses.push(response)
         }
       }).rejects.toThrow('Stream interrupted')
+
+      // Should have gotten the first response before error
+      expect(responses).toHaveLength(1)
+      expect(responses[0].responseToUser).toBe('Starting...')
     })
   })
 
-  describe('different todo list states', () => {
-    it('should handle empty todo list', async () => {
-      mockGetTodos.mockResolvedValue([])
-      
-      const mockResponse = {
-        action: 'add_todo',
-        name: 'First task',
-        category: 'Getting Started',
-        priority: 'High Priority',
-        responseToUser: 'Added your first task!'
+  describe('edge cases', () => {
+    it('should handle empty user message', async () => {
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [{ action: 'chat' }],
+        responseToUser: 'Please let me know how I can help you.'
       }
-      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
 
-      await streamChatMessage('Add my first task', [])
+      const stream = await streamChatMessage('', [])
 
-      expect(mockBAMLStream).toHaveBeenCalledWith('Add my first task', [], [])
+      expect(mockBAMLStream).toHaveBeenCalledWith('', mockTodos, [])
+
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
+
+      expect(responses).toHaveLength(1)
+      expect(responses[0]).toEqual(mockBatchResponse)
     })
 
-    it('should handle large todo list', async () => {
-      const largeTodoList: Todo[] = Array.from({ length: 50 }, (_, i) => ({
+    it('should handle very long user messages', async () => {
+      const longMessage = 'a'.repeat(10000)
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [{ action: 'chat' }],
+        responseToUser: 'I understand your long message.'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
+
+      const stream = await streamChatMessage(longMessage, [])
+
+      expect(mockBAMLStream).toHaveBeenCalledWith(longMessage, mockTodos, [])
+
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
+
+      expect(responses).toHaveLength(1)
+      expect(responses[0]).toEqual(mockBatchResponse)
+    })
+
+    it('should handle empty todos array', async () => {
+      mockGetTodos.mockResolvedValue([])
+      
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [{ action: 'chat' }],
+        responseToUser: 'You have no todos yet.'
+      }
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
+
+      const stream = await streamChatMessage('Show my todos', [])
+
+      expect(mockBAMLStream).toHaveBeenCalledWith('Show my todos', [], [])
+
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
+
+      expect(responses).toHaveLength(1)
+      expect(responses[0]).toEqual(mockBatchResponse)
+    })
+
+    it('should handle large todos array', async () => {
+      const largeTodosArray = Array.from({ length: 1000 }, (_, i) => ({
         id: `${i + 1}`,
         name: `Task ${i + 1}`,
         category: 'Work',
-        priority: 'Medium Priority',
-        completed: i % 3 === 0
+        priority: 'Medium Priority' as const,
+        completed: false
       }))
-      mockGetTodos.mockResolvedValue(largeTodoList)
       
-      const mockResponse = {
-        action: 'chat',
-        responseToUser: 'You have quite a few tasks! Let me help organize them.'
+      mockGetTodos.mockResolvedValue(largeTodosArray)
+      
+      const mockBatchResponse: BatchTodoResponse = {
+        actions: [{ action: 'chat' }],
+        responseToUser: 'You have many todos!'
       }
-      mockBAMLStream.mockReturnValue(createMockStream([mockResponse]))
+      mockBAMLStream.mockReturnValue(createMockStream(mockBatchResponse))
 
-      await streamChatMessage('Help me organize my tasks', [])
+      const stream = await streamChatMessage('Show my todos', [])
 
-      expect(mockBAMLStream).toHaveBeenCalledWith(
-        'Help me organize my tasks',
-        largeTodoList,
-        []
-      )
+      expect(mockBAMLStream).toHaveBeenCalledWith('Show my todos', largeTodosArray, [])
+
+      const responses = []
+      for await (const response of stream) {
+        responses.push(response)
+      }
+
+      expect(responses).toHaveLength(1)
+      expect(responses[0]).toEqual(mockBatchResponse)
     })
   })
 })

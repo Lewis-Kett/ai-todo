@@ -55,7 +55,7 @@ describe('ChatMessages', () => {
   })
 
   it('renders empty state when no messages', () => {
-    render(<ChatMessages messages={[]} />)
+    render(<ChatMessages messages={[]} streamingMessageId={null} />)
     
     // Empty state is not rendered in the simplified version
     const container = screen.getByTestId('scroll-area')
@@ -64,7 +64,7 @@ describe('ChatMessages', () => {
 
 
   it('renders messages correctly', () => {
-    render(<ChatMessages messages={mockMessages} />)
+    render(<ChatMessages messages={mockMessages} streamingMessageId={null} />)
     
     expect(screen.getByTestId('chat-message-1')).toBeInTheDocument()
     expect(screen.getByTestId('chat-message-2')).toBeInTheDocument()
@@ -73,7 +73,7 @@ describe('ChatMessages', () => {
   })
 
   it('renders messages with ScrollArea component', () => {
-    render(<ChatMessages messages={mockMessages} />)
+    render(<ChatMessages messages={mockMessages} streamingMessageId={null} />)
     
     expect(screen.getByTestId('scroll-area')).toBeInTheDocument()
   })
@@ -81,7 +81,7 @@ describe('ChatMessages', () => {
 
 
   it('renders messages in the correct order', () => {
-    render(<ChatMessages messages={mockMessages} />)
+    render(<ChatMessages messages={mockMessages} streamingMessageId={null} />)
     
     const messages = screen.getAllByTestId(/chat-message-/)
     expect(messages).toHaveLength(2)
@@ -90,14 +90,14 @@ describe('ChatMessages', () => {
   })
 
   it('renders with proper spacing classes', () => {
-    const { container } = render(<ChatMessages messages={mockMessages} />)
+    const { container } = render(<ChatMessages messages={mockMessages} streamingMessageId={null} />)
     
     const messagesContainer = container.querySelector('.space-y-2')
     expect(messagesContainer).toBeInTheDocument()
   })
 
   it('calls scrollIntoView when messages are rendered', () => {
-    render(<ChatMessages messages={mockMessages} />)
+    render(<ChatMessages messages={mockMessages} streamingMessageId={null} />)
     
     expect(mockScrollIntoView).toHaveBeenCalledWith({
       behavior: 'smooth',
@@ -106,10 +106,10 @@ describe('ChatMessages', () => {
   })
 
   it('calls scrollIntoView when loading state changes', () => {
-    const { rerender } = render(<ChatMessages messages={mockMessages} />)
+    const { rerender } = render(<ChatMessages messages={mockMessages} streamingMessageId={null} />)
     mockScrollIntoView.mockClear()
     
-    rerender(<ChatMessages messages={mockMessages} isLoading={true} />)
+    rerender(<ChatMessages messages={mockMessages} isLoading={true} streamingMessageId={null} />)
     
     expect(mockScrollIntoView).toHaveBeenCalledWith({
       behavior: 'smooth',
