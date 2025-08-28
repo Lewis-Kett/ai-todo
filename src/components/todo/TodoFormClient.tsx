@@ -7,29 +7,39 @@ import { Input } from "@/components/ui/input"
 import { Plus } from "lucide-react"
 import { addTodo } from '@/actions/todo-actions'
 import { DEFAULT_TODO_CATEGORY, DEFAULT_TODO_PRIORITY } from '@/constants/todo'
+import { handleError, createValidationError } from '@/lib/errors'
+import { useToast } from '@/hooks/useToast'
 
 export function TodoFormClient() {
   const [taskInput, setTaskInput] = useState('')
   const [isPending, startTransition] = useTransition()
+  const { showSuccess, showError } = useToast()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const trimmedInput = taskInput.trim()
-    if (trimmedInput) {
-      startTransition(async () => {
-        try {
-          await addTodo({
-            name: trimmedInput,
-            category: DEFAULT_TODO_CATEGORY,
-            priority: DEFAULT_TODO_PRIORITY
-          })
-          setTaskInput('') // Clear immediately for rapid input
-        } catch (error) {
-          console.error('Failed to add todo:', error)
-          // Keep the input value so user can retry
-        }
-      })
+    if (!trimmedInput) {
+      const validationError = createValidationError('Please enter a task description')
+      showError(validationError)
+      return
     }
+
+    startTransition(async () => {
+      try {
+        await addTodo({
+          name: trimmedInput,
+          category: DEFAULT_TODO_CATEGORY,
+          priority: DEFAULT_TODO_PRIORITY
+        })
+        setTaskInput('') // Clear immediately for rapid input
+        showSuccess('Task added successfully!')
+      } catch (error) {
+        const appError = handleError(error)
+        console.error('Failed to add todo:', appError)
+        showError(appError)
+        // Keep the input value so user can retry
+      }
+    })
   }
 
   return (

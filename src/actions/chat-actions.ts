@@ -3,6 +3,7 @@
 import { Message } from "@/baml_client/types"
 import { b } from "@/baml_client"
 import { getTodos } from "./todo-actions"
+import { handleError, createChatError } from "@/lib/errors"
 
 export async function streamChatMessage(
   userMessage: string,
@@ -26,7 +27,10 @@ export async function streamChatMessage(
       }
     })()
   } catch (error) {
-    console.error("Error in streamChatMessage:", error)
-    throw new Error("Sorry, I encountered an error processing your request.")
+    const appError = handleError(error)
+    console.error("Error in streamChatMessage:", appError)
+    
+    const chatError = createChatError("Sorry, I encountered an error processing your request.")
+    throw chatError
   }
 }

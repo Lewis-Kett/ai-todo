@@ -5,6 +5,8 @@ import { streamChatMessage } from "@/actions/chat-actions"
 import { processBatchTodoResponse } from "@/lib/todo-action-processor"
 import { CHAT_ANIMATION_DURATION } from "@/lib/constants"
 import { partial_types } from "@/baml_client"
+import { handleError, createChatError } from "@/lib/errors"
+import { useToast } from "@/hooks/useToast"
 
 export function useChatStream() {
   const [messages, setMessages] = useState<Message[]>([])
@@ -13,6 +15,7 @@ export function useChatStream() {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
     null
   )
+  const { showError } = useToast()
 
   const sendMessage = async (inputValue: string) => {
     try {
@@ -55,8 +58,12 @@ export function useChatStream() {
         // Clear streaming message ID after animation completes
         setTimeout(() => setStreamingMessageId(null), CHAT_ANIMATION_DURATION)
       } catch (error) {
-        console.error("Error:", error)
-        setError("Failed to process your request. Please try again.")
+        const appError = handleError(error)
+        const chatError = createChatError("Failed to process your request. Please try again.")
+        
+        console.error("Error:", appError)
+        setError(chatError.message)
+        showError(chatError)
 
         // Remove the empty assistant message on error
         setMessages((prev) => {
@@ -69,8 +76,12 @@ export function useChatStream() {
         setTimeout(() => setStreamingMessageId(null), CHAT_ANIMATION_DURATION)
       }
     } catch (error) {
-      console.error("Send message error:", error)
-      setError("Failed to send message. Please try again.")
+      const appError = handleError(error)
+      const chatError = createChatError("Failed to send message. Please try again.")
+      
+      console.error("Send message error:", appError)
+      setError(chatError.message)
+      showError(chatError)
     } finally {
       setIsLoading(false)
     }

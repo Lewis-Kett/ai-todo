@@ -29,18 +29,9 @@ export function ChatMessages({ messages, isLoading, streamingMessageId }: ChatMe
             key={message.id} 
             message={message} 
             isStreaming={message.id === streamingMessageId}
+            isLoading={isLoading}
           />
         ))}
-        {isLoading && (
-          <div className="flex items-center space-x-2 text-muted-foreground">
-            <div className="animate-pulse flex space-x-1">
-              <div className="rounded-full bg-current w-2 h-2"></div>
-              <div className="rounded-full bg-current w-2 h-2"></div>
-              <div className="rounded-full bg-current w-2 h-2"></div>
-            </div>
-            <span className="text-sm">AI is thinking...</span>
-          </div>
-        )}
         <div ref={bottomRef} />
       </div>
     </ScrollArea>

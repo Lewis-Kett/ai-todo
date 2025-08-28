@@ -7,11 +7,13 @@ import type { Message } from "@/baml_client/types"
 interface ChatMessageProps {
   message: Message
   isStreaming?: boolean
+  isLoading?: boolean
 }
 
 export const ChatMessage = memo(function ChatMessage({
   message,
   isStreaming = false,
+  isLoading = false,
 }: ChatMessageProps) {
   const isUser = message.role === "user"
   const isAssistant = message.role === "assistant"
@@ -41,7 +43,15 @@ export const ChatMessage = memo(function ChatMessage({
               : "bg-muted text-muted-foreground"
           )}
         >
-          <p>{displayContent}</p>
+          {isLoading && isAssistant && !message.content ? (
+            <div className="animate-pulse flex space-x-1">
+              <div className="rounded-full bg-current w-2 h-2"></div>
+              <div className="rounded-full bg-current w-2 h-2"></div>
+              <div className="rounded-full bg-current w-2 h-2"></div>
+            </div>
+          ) : (
+            <p>{displayContent}</p>
+          )}
         </div>
       </div>
     </div>

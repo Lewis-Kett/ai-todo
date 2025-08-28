@@ -5,8 +5,9 @@
  * since they are just async functions that receive parameters and return values.
  */
 
-import { addTodo, deleteTodo, toggleTodoComplete, updateTodo, getTodos, getTodoStats } from '../todo-actions'
+import { addTodo, deleteTodo, toggleTodoComplete, updateTodo, getTodos, getTodoStats, processBatchTodoActions } from '../todo-actions'
 import { TodoFormData, Todo } from '@/types/todo'
+import { BatchTodoResponse } from '@/baml_client'
 
 // Mock Next.js cache functions since they're server functions
 jest.mock('next/cache', () => ({
@@ -32,8 +33,20 @@ jest.mock('@/lib/todo-operations', () => {
   return actual
 })
 
+// Mock error handling
+jest.mock('@/lib/errors', () => ({
+  createDataError: jest.fn((message) => {
+    const error = new Error(message)
+    error.name = 'AppError'
+    return Object.assign(error, { code: 'DATA_ERROR', severity: 'medium' })
+  })
+}))
+
 // Import the mocked functions for testing
 import { revalidateTodos } from '@/lib/todo-data'
+import { createDataError } from '@/lib/errors'
+
+const mockCreateDataError = createDataError as jest.MockedFunction<typeof createDataError>
 
 describe('Todo Server Actions', () => {
   beforeEach(() => {
@@ -297,6 +310,65 @@ describe('Todo Server Actions', () => {
       
       await updateTodo('test-id', { name: 'Updated' })
       expect(revalidateTodos).toHaveBeenCalled()
+    })
+  })
+
+  describe('processBatchTodoActions', () => {
+    beforeEach(() => {
+      // Setup initial todos for batch operations
+      mockTodos = [
+        { id: '1', name: 'Existing Task 1', category: 'Work', priority: 'High Priority', completed: false },
+        { id: '2', name: 'Existing Task 2', category: 'Personal', priority: 'Low Priority', completed: true },
+      ]
+    })
+
+    it('should throw AppError when todo not found', async () => {
+      const actions: BatchTodoResponse['actions'] = [
+        { action: 'delete_todo', id: 'nonexistent-id' }
+      ]
+
+      await expect(processBatchTodoActions(actions)).rejects.toThrow()
+      
+      // Check that createDataError was called with proper message
+      expect(mockCreateDataError).toHaveBeenCalledWith('Todo with id "nonexistent-id" not found')
+    })
+
+    it('should process multiple valid actions successfully', async () => {
+      const actions: BatchTodoResponse['actions'] = [
+        { action: 'add_todo', name: 'New Task', category: 'Work', priority: 'Medium Priority' },
+        { action: 'toggle_todo', id: '1' },
+        { action: 'delete_todo', id: '2' }
+      ]
+
+      await processBatchTodoActions(actions)
+
+      const finalTodos = await getTodos()
+      
+      // Should have 2 todos: the original task 1 (toggled) + new task, task 2 deleted
+      expect(finalTodos).toHaveLength(2)
+      expect(finalTodos.find(t => t.id === '1')?.completed).toBe(true)
+      expect(finalTodos.find(t => t.name === 'New Task')).toBeTruthy()
+      expect(finalTodos.find(t => t.id === '2')).toBeUndefined()
+      
+      expect(revalidateTodos).toHaveBeenCalled()
+    })
+
+    it('should validate all actions before processing any', async () => {
+      const actions: BatchTodoResponse['actions'] = [
+        { action: 'toggle_todo', id: '1' }, // valid
+        { action: 'delete_todo', id: 'invalid-id' }, // invalid
+        { action: 'add_todo', name: 'New Task', category: 'Work', priority: 'High Priority' } // would be valid
+      ]
+
+      await expect(processBatchTodoActions(actions)).rejects.toThrow()
+      
+      // Should not have processed any actions (todos remain unchanged)
+      const finalTodos = await getTodos()
+      expect(finalTodos).toHaveLength(2)
+      expect(finalTodos.find(t => t.id === '1')?.completed).toBe(false) // not toggled
+      expect(finalTodos.find(t => t.name === 'New Task')).toBeUndefined() // not added
+      
+      expect(mockCreateDataError).toHaveBeenCalledWith('Todo with id "invalid-id" not found')
     })
   })
 })

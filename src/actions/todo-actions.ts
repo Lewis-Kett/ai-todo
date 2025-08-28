@@ -14,6 +14,7 @@ import {
   updateTodoInArray,
 } from "@/lib/todo-operations"
 import { BatchTodoResponse } from "@/baml_client"
+import { createDataError } from "@/lib/errors"
 
 // Cached version of getTodos with cache tags
 export const getTodos = unstable_cache(
@@ -78,7 +79,7 @@ export async function processBatchTodoActions(
       todoAction.action === "update_todo"
     ) {
       if (!todoMap.has(todoAction.id)) {
-        throw new Error(`Todo with id "${todoAction.id}" not found`)
+        throw createDataError(`Todo with id "${todoAction.id}" not found`)
       }
     }
   }

@@ -16,9 +16,6 @@ jest.mock('@/actions/todo-actions', () => ({
 // Import the mocked function for testing
 import { processBatchTodoActions } from '@/actions/todo-actions'
 
-// Mock console methods to test logging
-jest.spyOn(console, 'error').mockImplementation()
-
 describe('todo-action-processor', () => {
   beforeEach(() => {
     jest.clearAllMocks()

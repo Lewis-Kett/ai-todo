@@ -350,8 +350,6 @@ describe('TodoItemClient', () => {
 
   describe('Error Handling', () => {
     it('should handle server action errors gracefully', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
-      
       const user = userEvent.setup()
       
       // Mock server error
@@ -366,8 +364,6 @@ describe('TodoItemClient', () => {
       await waitFor(() => {
         expect(checkbox).not.toBeDisabled()
       })
-      
-      consoleErrorSpy.mockRestore()
     })
   })
 })

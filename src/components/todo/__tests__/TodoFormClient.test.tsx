@@ -14,16 +14,45 @@ jest.mock('@/actions/todo-actions', () => ({
   addTodo: jest.fn(),
 }))
 
-// Import the mocked function
+// Mock the useToast hook
+jest.mock('@/hooks/useToast', () => ({
+  useToast: jest.fn(),
+}))
+
+// Mock the error utilities
+jest.mock('@/lib/errors', () => ({
+  handleError: jest.fn((error) => error),
+  createValidationError: jest.fn((message) => ({ message, code: 'VALIDATION_ERROR', severity: 'low' })),
+}))
+
+// Import the mocked functions
 import { addTodo } from '@/actions/todo-actions'
+import { useToast } from '@/hooks/useToast'
+import { createValidationError } from '@/lib/errors'
+
 const mockAddTodo = addTodo as jest.MockedFunction<typeof addTodo>
+const mockUseToast = useToast as jest.MockedFunction<typeof useToast>
+const mockCreateValidationError = createValidationError as jest.MockedFunction<typeof createValidationError>
 
 describe('TodoFormClient', () => {
+  const mockShowSuccess = jest.fn()
+  const mockShowError = jest.fn()
 
   beforeEach(() => {
     jest.clearAllMocks()
+    
     // Mock successful response by default
     mockAddTodo.mockResolvedValue(undefined)
+    
+    // Mock useToast hook return
+    mockUseToast.mockReturnValue({
+      showSuccess: mockShowSuccess,
+      showError: mockShowError,
+      showWarning: jest.fn(),
+      showInfo: jest.fn(),
+      showLoading: jest.fn(),
+      dismiss: jest.fn(),
+    })
   })
 
   describe('Form rendering', () => {
@@ -72,7 +101,7 @@ describe('TodoFormClient', () => {
       })
     })
 
-    it('should clear input field after successful submission', async () => {
+    it('should clear input field and show success toast after successful submission', async () => {
       const user = userEvent.setup()
       render(<TodoFormClient />)
       
@@ -85,6 +114,7 @@ describe('TodoFormClient', () => {
       // With controlled inputs, clearing happens immediately
       await waitFor(() => {
         expect(input.value).toBe('')
+        expect(mockShowSuccess).toHaveBeenCalledWith('Task added successfully!')
       })
     })
 
@@ -106,7 +136,7 @@ describe('TodoFormClient', () => {
       })
     })
 
-    it('should not submit empty task', async () => {
+    it('should show validation error for empty task', async () => {
       const user = userEvent.setup()
       render(<TodoFormClient />)
       
@@ -115,9 +145,15 @@ describe('TodoFormClient', () => {
       await user.click(submitButton)
       
       expect(mockAddTodo).not.toHaveBeenCalled()
+      expect(mockCreateValidationError).toHaveBeenCalledWith('Please enter a task description')
+      expect(mockShowError).toHaveBeenCalledWith({
+        message: 'Please enter a task description',
+        code: 'VALIDATION_ERROR',
+        severity: 'low'
+      })
     })
 
-    it('should not submit task with only whitespace', async () => {
+    it('should show validation error for task with only whitespace', async () => {
       const user = userEvent.setup()
       render(<TodoFormClient />)
       
@@ -128,6 +164,12 @@ describe('TodoFormClient', () => {
       await user.click(submitButton)
       
       expect(mockAddTodo).not.toHaveBeenCalled()
+      expect(mockCreateValidationError).toHaveBeenCalledWith('Please enter a task description')
+      expect(mockShowError).toHaveBeenCalledWith({
+        message: 'Please enter a task description',
+        code: 'VALIDATION_ERROR',
+        severity: 'low'
+      })
     })
 
     it('should trim whitespace from task name', async () => {
@@ -207,13 +249,12 @@ describe('TodoFormClient', () => {
   })
 
   describe('Error handling', () => {
-    it('should handle server action errors gracefully', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
-      
+    it('should handle server action errors gracefully and show error toast', async () => {
       const user = userEvent.setup()
       
       // Mock server error
-      mockAddTodo.mockRejectedValue(new Error('Server error'))
+      const serverError = new Error('Server error')
+      mockAddTodo.mockRejectedValue(serverError)
       
       render(<TodoFormClient />)
       
@@ -233,8 +274,33 @@ describe('TodoFormClient', () => {
       // With controlled inputs on error, input value is preserved for retry
       expect(input).toHaveValue('Task that will fail')
       
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to add todo:', expect.any(Error))
-      consoleErrorSpy.mockRestore()
+      // Check error handling and toast notification
+      expect(console.error).toHaveBeenCalledWith('Failed to add todo:', serverError)
+      expect(mockShowError).toHaveBeenCalledWith(serverError)
+    })
+
+    it('should preserve input value on server error for retry', async () => {
+      const user = userEvent.setup()
+      
+      // Mock server error
+      mockAddTodo.mockRejectedValue(new Error('Network timeout'))
+      
+      render(<TodoFormClient />)
+      
+      const input = screen.getByLabelText(/task description/i) as HTMLInputElement
+      const submitButton = screen.getByRole('button', { name: /add new task/i })
+      
+      await user.type(input, 'Task to retry')
+      await user.click(submitButton)
+      
+      // Wait for error handling to complete
+      await waitFor(() => {
+        expect(screen.getByText('Add Task')).toBeInTheDocument()
+      })
+      
+      // Input value should be preserved for retry
+      expect(input).toHaveValue('Task to retry')
+      expect(mockShowError).toHaveBeenCalled()
     })
   })
 

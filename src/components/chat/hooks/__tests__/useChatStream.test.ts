@@ -9,11 +9,21 @@ import { processBatchTodoResponse } from '@/lib/todo-action-processor'
 jest.mock('../../utils/messageUtils')
 jest.mock('@/actions/chat-actions')
 jest.mock('@/lib/todo-action-processor')
+jest.mock('@/hooks/useToast')
+jest.mock('@/lib/errors')
 
 // Cast mocked functions for type safety
 const mockCreateMessage = createMessage as jest.MockedFunction<typeof createMessage>
 const mockStreamChatMessage = streamChatMessage as jest.MockedFunction<typeof streamChatMessage>
 const mockProcessBatchTodoResponse = processBatchTodoResponse as jest.MockedFunction<typeof processBatchTodoResponse>
+
+// Import and mock toast functions
+import { useToast } from '@/hooks/useToast'
+import { handleError, createChatError } from '@/lib/errors'
+
+const mockUseToast = useToast as jest.MockedFunction<typeof useToast>
+const mockHandleError = handleError as jest.MockedFunction<typeof handleError>
+const mockCreateChatError = createChatError as jest.MockedFunction<typeof createChatError>
 
 // Helper to create mock async generator from batch responses
 function createMockStream(batchResponse: BatchTodoResponse) {
@@ -30,6 +40,8 @@ const createMockMessage = (role: Message['role'], content: string, id = 'mock-id
 })
 
 describe('useChatStream', () => {
+  const mockShowError = jest.fn()
+
   // Suppress console.error for error condition tests
   const originalError = console.error
   beforeAll(() => {
@@ -42,12 +54,27 @@ describe('useChatStream', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    
     // Setup default mock implementations
     mockCreateMessage.mockImplementation((role, content, id) => ({
       id: id || 'mock-id',
       role,
       content
     }))
+
+    // Mock useToast hook
+    mockUseToast.mockReturnValue({
+      showSuccess: jest.fn(),
+      showError: mockShowError,
+      showWarning: jest.fn(),
+      showInfo: jest.fn(),
+      showLoading: jest.fn(),
+      dismiss: jest.fn(),
+    })
+
+    // Mock error handling functions
+    mockHandleError.mockImplementation((error) => error)
+    mockCreateChatError.mockImplementation((message) => ({ message, code: 'CHAT_ERROR', severity: 'medium' }))
   })
 
   describe('initial state', () => {
@@ -258,8 +285,9 @@ describe('useChatStream', () => {
   })
 
   describe('error handling', () => {
-    it('should handle stream creation errors', async () => {
-      mockStreamChatMessage.mockRejectedValue(new Error('Failed to create stream'))
+    it('should handle stream creation errors and show toast', async () => {
+      const streamError = new Error('Failed to create stream')
+      mockStreamChatMessage.mockRejectedValue(streamError)
 
       const { result } = renderHook(() => useChatStream())
 
@@ -271,6 +299,11 @@ describe('useChatStream', () => {
       expect(result.current.error).toBe('Failed to process your request. Please try again.')
       expect(result.current.messages).toHaveLength(1) // User message is added before the error occurs
       expect(result.current.messages[0].role).toBe('user')
+      
+      // Check error handling and toast notification
+      expect(mockHandleError).toHaveBeenCalledWith(streamError)
+      expect(mockCreateChatError).toHaveBeenCalledWith('Failed to process your request. Please try again.')
+      expect(mockShowError).toHaveBeenCalled()
     })
 
     it('should handle streaming errors and clean up assistant message', async () => {
@@ -303,6 +336,10 @@ describe('useChatStream', () => {
       expect(result.current.messages).toHaveLength(2)
       expect(result.current.messages[0]).toEqual(userMessage)
       expect(result.current.messages[1].content).toBe('Starting...')
+      
+      // Check error handling and toast notification
+      expect(mockCreateChatError).toHaveBeenCalledWith('Failed to process your request. Please try again.')
+      expect(mockShowError).toHaveBeenCalled()
     })
 
     it('should handle processBatchTodoResponse errors gracefully', async () => {

@@ -18,9 +18,23 @@ jest.mock('@/baml_client', () => ({
   }
 }))
 
-// Cast mocked functions for type safety
+// Mock error handling utilities
+jest.mock('@/lib/errors', () => ({
+  handleError: jest.fn((error) => error),
+  createChatError: jest.fn((message) => {
+    const error = new Error(message)
+    error.name = 'AppError'
+    return Object.assign(error, { code: 'CHAT_ERROR', severity: 'medium' })
+  })
+}))
+
+// Import and cast mocked functions for type safety
+import { handleError, createChatError } from '@/lib/errors'
+
 const mockGetTodos = getTodos as jest.MockedFunction<typeof getTodos>
 const mockBAMLStream = b.stream.HandleTodoRequest as jest.MockedFunction<typeof b.stream.HandleTodoRequest>
+const mockHandleError = handleError as jest.MockedFunction<typeof handleError>
+const mockCreateChatError = createChatError as jest.MockedFunction<typeof createChatError>
 
 // Helper to create a mock BAML stream from batch responses
 function createMockStream(batchResponse: BatchTodoResponse): any {
@@ -342,19 +356,25 @@ describe('streamChatMessage', () => {
   })
 
   describe('error handling', () => {
-    it('should handle getTodos errors', async () => {
-      mockGetTodos.mockRejectedValue(new Error('Database error'))
+    it('should handle getTodos errors with proper error handling', async () => {
+      const databaseError = new Error('Database error')
+      mockGetTodos.mockRejectedValue(databaseError)
 
       await expect(streamChatMessage('Test message', []))
         .rejects.toThrow('Sorry, I encountered an error processing your request.')
 
       expect(mockGetTodos).toHaveBeenCalledTimes(1)
       expect(mockBAMLStream).not.toHaveBeenCalled()
+      
+      // Check that error handling utilities were called
+      expect(mockHandleError).toHaveBeenCalledWith(databaseError)
+      expect(mockCreateChatError).toHaveBeenCalledWith('Sorry, I encountered an error processing your request.')
     })
 
-    it('should handle BAML stream creation errors', async () => {
+    it('should handle BAML stream creation errors with proper error handling', async () => {
+      const bamlError = new Error('BAML stream error')
       mockBAMLStream.mockImplementation(() => {
-        throw new Error('BAML stream error')
+        throw bamlError
       })
 
       await expect(streamChatMessage('Test message', []))
@@ -362,6 +382,10 @@ describe('streamChatMessage', () => {
 
       expect(mockGetTodos).toHaveBeenCalledTimes(1)
       expect(mockBAMLStream).toHaveBeenCalledTimes(1)
+      
+      // Check that error handling utilities were called
+      expect(mockHandleError).toHaveBeenCalledWith(bamlError)
+      expect(mockCreateChatError).toHaveBeenCalledWith('Sorry, I encountered an error processing your request.')
     })
 
     it('should handle streaming errors during iteration', async () => {

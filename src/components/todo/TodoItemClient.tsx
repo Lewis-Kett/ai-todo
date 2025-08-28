@@ -9,6 +9,8 @@ import { Trash2 } from "lucide-react"
 import { Todo, TodoPriority } from "@/types/todo"
 import { useInlineEdit } from "@/hooks/useInlineEdit"
 import { deleteTodo, toggleTodoComplete, updateTodo } from '@/actions/todo-actions'
+import { handleError, createDataError } from '@/lib/errors'
+import { useToast } from '@/hooks/useToast'
 
 interface TodoItemClientProps {
   todo: Todo
@@ -21,6 +23,7 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
     (state: Todo & { deleting: boolean }, update: Partial<Todo & { deleting: boolean }>) => ({ ...state, ...update })
   )
   const [isPending, startTransition] = useTransition()
+  const { showError, showSuccess } = useToast()
   
   const priorities: TodoPriority[] = ['High Priority', 'Medium Priority', 'Low Priority']
   
@@ -33,8 +36,11 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
       updateOptimisticTodo({ name })
       try {
         await updateTodo(optimisticTodo.id, { name })
+        showSuccess("Name edited successfully")
       } catch (error) {
-        console.error('Failed to update todo name:', error)
+        const appError = handleError(error)
+        console.error('Failed to update todo name:', appError)
+        showError(createDataError('Failed to update task name'))
         // Revert optimistic update on error
         updateOptimisticTodo({ name: todo.name })
       }
@@ -46,8 +52,11 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
       updateOptimisticTodo({ category })
       try {
         await updateTodo(optimisticTodo.id, { category })
+        showSuccess("Category edited successfully")
       } catch (error) {
-        console.error('Failed to update todo category:', error)
+        const appError = handleError(error)
+        console.error('Failed to update todo category:', appError)
+        showError(createDataError('Failed to update task category'))
         // Revert optimistic update on error
         updateOptimisticTodo({ category: todo.category })
       }
@@ -60,8 +69,11 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
       updateOptimisticTodo({ completed: !optimisticTodo.completed })
       try {
         await toggleTodoComplete(optimisticTodo.id)
+        showSuccess("Status edited successfully")
       } catch (error) {
-        console.error('Failed to toggle todo completion:', error)
+        const appError = handleError(error)
+        console.error('Failed to toggle todo completion:', appError)
+        showError(createDataError('Failed to update task completion'))
         // Revert optimistic update on error
         updateOptimisticTodo({ completed: previousCompleted })
       }
@@ -72,10 +84,14 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
     startTransition(async () => {
       // Set deleting state optimistically
       updateOptimisticTodo({ deleting: true })
+      showSuccess("Todo deleted successfully")
       try {
         await deleteTodo(optimisticTodo.id)
+        showSuccess('Task deleted successfully!')
       } catch (error) {
-        console.error('Failed to delete todo:', error)
+        const appError = handleError(error)
+        console.error('Failed to delete todo:', appError)
+        showError(createDataError('Failed to delete task'))
         // Revert optimistic update on error
         updateOptimisticTodo({ deleting: false })
       }
@@ -91,10 +107,13 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
     
     startTransition(async () => {
       updateOptimisticTodo({ priority: newPriority })
+      showSuccess("Priority edited successfully")
       try {
         await updateTodo(optimisticTodo.id, { priority: newPriority })
       } catch (error) {
-        console.error('Failed to update todo priority:', error)
+        const appError = handleError(error)
+        console.error('Failed to update todo priority:', appError)
+        showError(createDataError('Failed to update task priority'))
         // Revert optimistic update on error
         updateOptimisticTodo({ priority: todo.priority })
       }

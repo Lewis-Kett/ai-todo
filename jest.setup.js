@@ -63,4 +63,8 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
 }
 
+// Suppress console.error during tests to reduce noise from intentional error scenarios
+// Individual tests can still spy on console.error if they need to verify error handling
+global.console.error = jest.fn()
+
 // Note: BAML client mocking is handled in individual test files as needed
