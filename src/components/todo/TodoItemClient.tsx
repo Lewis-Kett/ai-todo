@@ -1,124 +1,36 @@
 'use client'
 
-import { useOptimistic, useTransition } from 'react'
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Trash2 } from "lucide-react"
-import { Todo, TodoPriority } from "@/types/todo"
+import { Todo } from "@/types/todo"
 import { useInlineEdit } from "@/hooks/useInlineEdit"
-import { deleteTodo, toggleTodoComplete, updateTodo } from '@/actions/todo-actions'
-import { handleError, createDataError } from '@/lib/errors'
-import { useToast } from '@/hooks/useToast'
+import { useTodoItem } from "@/hooks/useTodoItem"
 
 interface TodoItemClientProps {
   todo: Todo
 }
 
 export function TodoItemClient({ todo }: TodoItemClientProps) {
-  //todo wrap this guy in custom hook
-  const [optimisticTodo, updateOptimisticTodo] = useOptimistic(
-    { ...todo, deleting: false },
-    (state: Todo & { deleting: boolean }, update: Partial<Todo & { deleting: boolean }>) => ({ ...state, ...update })
-  )
-  const [isPending, startTransition] = useTransition()
-  const { showError, showSuccess } = useToast()
-  
-  const priorities: TodoPriority[] = ['High Priority', 'Medium Priority', 'Low Priority']
+  const { 
+    optimisticTodo,
+    isPending,
+    handleToggleComplete,
+    handleDelete,
+    cyclePriority,
+    updateName,
+    updateCategory
+  } = useTodoItem(todo)
   
   const priorityVariant = optimisticTodo.completed ? "outline" : "outline"
   
   const priorityText = optimisticTodo.completed ? "Completed" : optimisticTodo.priority
 
-  const nameEdit = useInlineEdit(optimisticTodo.name, (name) => {
-    startTransition(async () => {
-      updateOptimisticTodo({ name })
-      try {
-        await updateTodo(optimisticTodo.id, { name })
-        showSuccess("Name edited successfully")
-      } catch (error) {
-        const appError = handleError(error)
-        console.error('Failed to update todo name:', appError)
-        showError(createDataError('Failed to update task name'))
-        // Revert optimistic update on error
-        updateOptimisticTodo({ name: todo.name })
-      }
-    })
-  })
+  const nameEdit = useInlineEdit(optimisticTodo.name, updateName)
 
-  const categoryEdit = useInlineEdit(optimisticTodo.category, (category) => {
-    startTransition(async () => {
-      updateOptimisticTodo({ category })
-      try {
-        await updateTodo(optimisticTodo.id, { category })
-        showSuccess("Category edited successfully")
-      } catch (error) {
-        const appError = handleError(error)
-        console.error('Failed to update todo category:', appError)
-        showError(createDataError('Failed to update task category'))
-        // Revert optimistic update on error
-        updateOptimisticTodo({ category: todo.category })
-      }
-    })
-  })
-
-  const handleToggleComplete = () => {
-    startTransition(async () => {
-      const previousCompleted = optimisticTodo.completed
-      updateOptimisticTodo({ completed: !optimisticTodo.completed })
-      try {
-        await toggleTodoComplete(optimisticTodo.id)
-        showSuccess("Status edited successfully")
-      } catch (error) {
-        const appError = handleError(error)
-        console.error('Failed to toggle todo completion:', appError)
-        showError(createDataError('Failed to update task completion'))
-        // Revert optimistic update on error
-        updateOptimisticTodo({ completed: previousCompleted })
-      }
-    })
-  }
-
-  const handleDelete = () => {
-    startTransition(async () => {
-      // Set deleting state optimistically
-      updateOptimisticTodo({ deleting: true })
-      showSuccess("Todo deleted successfully")
-      try {
-        await deleteTodo(optimisticTodo.id)
-        showSuccess('Task deleted successfully!')
-      } catch (error) {
-        const appError = handleError(error)
-        console.error('Failed to delete todo:', appError)
-        showError(createDataError('Failed to delete task'))
-        // Revert optimistic update on error
-        updateOptimisticTodo({ deleting: false })
-      }
-    })
-  }
-
-  const cyclePriority = () => {
-    if (optimisticTodo.completed) return
-    
-    const currentIndex = priorities.indexOf(optimisticTodo.priority)
-    const nextIndex = (currentIndex + 1) % priorities.length
-    const newPriority = priorities[nextIndex]
-    
-    startTransition(async () => {
-      updateOptimisticTodo({ priority: newPriority })
-      showSuccess("Priority edited successfully")
-      try {
-        await updateTodo(optimisticTodo.id, { priority: newPriority })
-      } catch (error) {
-        const appError = handleError(error)
-        console.error('Failed to update todo priority:', appError)
-        showError(createDataError('Failed to update task priority'))
-        // Revert optimistic update on error
-        updateOptimisticTodo({ priority: todo.priority })
-      }
-    })
-  }
+  const categoryEdit = useInlineEdit(optimisticTodo.category, updateCategory)
 
   return (
     <div 
