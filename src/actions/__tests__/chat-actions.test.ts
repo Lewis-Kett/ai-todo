@@ -1,6 +1,7 @@
 import { streamChatMessage } from '../chat-actions'
 import { b } from '@/baml_client'
 import { Message, BatchTodoResponse } from '@/baml_client/types'
+import { partial_types } from '@/baml_client'
 import { Todo } from '@/types/todo'
 import { getTodos } from '../todo-actions'
 
@@ -37,19 +38,28 @@ const mockHandleError = handleError as jest.MockedFunction<typeof handleError>
 const mockCreateChatError = createChatError as jest.MockedFunction<typeof createChatError>
 
 // Helper to create a mock BAML stream from batch responses
-function createMockStream(batchResponse: BatchTodoResponse): any {
+function createMockStream(batchResponse: BatchTodoResponse) {
   const stream = (async function* () {
     yield batchResponse
   })()
   
-  // Add the required BAML stream properties to make TypeScript happy
-  return Object.assign(stream, {
+  // Add the required BAML stream properties and use type assertion
+  const mockStream = Object.assign(stream, {
     ffiStream: {},
     partialCoerce: () => {},
     finalCoerce: () => {},
     ctxManager: {},
-    // Add other BAML stream properties that might be needed
+    task: Promise.resolve(),
+    eventQueue: [],
+    driveToCompletion: jest.fn(),
+    driveToCompletionInBg: jest.fn(),
+    getFinalResponse: () => Promise.resolve(batchResponse),
+    toStreamable: () => new ReadableStream(),
+    // Add async iterator symbol to satisfy BamlStream interface
+    [Symbol.asyncIterator]: stream[Symbol.asyncIterator].bind(stream)
   })
+  
+  return mockStream as any
 }
 
 describe('streamChatMessage', () => {
@@ -299,9 +309,16 @@ describe('streamChatMessage', () => {
         partialCoerce: () => {},
         finalCoerce: () => {},
         ctxManager: {},
+        task: Promise.resolve(),
+        eventQueue: [],
+        driveToCompletion: jest.fn(),
+        driveToCompletionInBg: jest.fn(),
+        getFinalResponse: () => Promise.resolve(responses[responses.length - 1]),
+        toStreamable: () => new ReadableStream(),
+        [Symbol.asyncIterator]: streamGenerator[Symbol.asyncIterator].bind(streamGenerator)
       })
 
-      mockBAMLStream.mockReturnValue(mockStream)
+      mockBAMLStream.mockReturnValue(mockStream as any)
 
       const messages: Message[] = []
       const stream = await streamChatMessage('Add a task', messages)
@@ -403,9 +420,16 @@ describe('streamChatMessage', () => {
         partialCoerce: () => {},
         finalCoerce: () => {},
         ctxManager: {},
+        task: Promise.resolve(),
+        eventQueue: [],
+        driveToCompletion: jest.fn(),
+        driveToCompletionInBg: jest.fn(),
+        getFinalResponse: () => Promise.reject(new Error('Stream interrupted')),
+        toStreamable: () => new ReadableStream(),
+        [Symbol.asyncIterator]: errorStream[Symbol.asyncIterator].bind(errorStream)
       })
 
-      mockBAMLStream.mockReturnValue(mockErrorStream)
+      mockBAMLStream.mockReturnValue(mockErrorStream as any)
 
       const stream = await streamChatMessage('Test message', [])
 
@@ -413,7 +437,7 @@ describe('streamChatMessage', () => {
       expect(stream).toBeDefined()
 
       // Consuming the stream should throw
-      const responses = []
+      const responses: partial_types.BatchTodoResponse[] = []
       await expect(async () => {
         for await (const response of stream) {
           responses.push(response)

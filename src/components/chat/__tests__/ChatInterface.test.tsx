@@ -49,7 +49,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: null,
       sendMessage: jest.fn(),
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
   })
 
@@ -59,7 +60,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: null,
       sendMessage: jest.fn(),
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
     
     render(<ChatInterface />)
@@ -82,7 +84,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: null,
       sendMessage: mockSendMessage,
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
     
     render(<ChatInterface />)
@@ -103,7 +106,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: 'Failed to process your request. Please try again.',
       sendMessage: mockSendMessage,
-      clearError: mockClearError
+      clearError: mockClearError,
+      streamingMessageId: null
     })
     
     render(<ChatInterface />)
@@ -122,7 +126,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: null,
       sendMessage: jest.fn(),
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
     
     render(<ChatInterface />)
@@ -139,7 +144,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: null,
       sendMessage: mockSendMessage,
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
     
     const { rerender } = render(<ChatInterface />)
@@ -153,7 +159,8 @@ describe('ChatInterface', () => {
       isLoading: true,
       error: null,
       sendMessage: mockSendMessage,
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: 'streaming-123'
     })
     
     rerender(<ChatInterface />)
@@ -168,7 +175,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: null,
       sendMessage: mockSendMessage,
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
     
     rerender(<ChatInterface />)
@@ -191,7 +199,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: null,
       sendMessage: mockSendMessage,
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
     
     const { rerender } = render(<ChatInterface />)
@@ -210,7 +219,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: null,
       sendMessage: mockSendMessage,
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
     
     rerender(<ChatInterface />)
@@ -227,7 +237,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: null,
       sendMessage: mockSendMessage,
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
     
     const { rerender } = render(<ChatInterface />)
@@ -245,7 +256,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: null,
       sendMessage: mockSendMessage,
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
     
     rerender(<ChatInterface />)
@@ -271,7 +283,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: 'Connection failed',
       sendMessage: jest.fn(),
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
     
     render(<ChatInterface />)
@@ -292,7 +305,8 @@ describe('ChatInterface', () => {
       isLoading: false,
       error: null,
       sendMessage: jest.fn(),
-      clearError: jest.fn()
+      clearError: jest.fn(),
+      streamingMessageId: null
     })
     
     render(<ChatInterface />)

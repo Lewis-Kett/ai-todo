@@ -73,8 +73,16 @@ describe('useChatStream', () => {
     })
 
     // Mock error handling functions
-    mockHandleError.mockImplementation((error) => error)
-    mockCreateChatError.mockImplementation((message) => ({ message, code: 'CHAT_ERROR', severity: 'medium' }))
+    mockHandleError.mockImplementation((error) => {
+      const appError = new Error(String(error))
+      appError.name = 'AppError'
+      return Object.assign(appError, { code: 'GENERIC_ERROR', severity: 'medium' as const })
+    })
+    mockCreateChatError.mockImplementation((message) => {
+      const appError = new Error(message)
+      appError.name = 'AppError'
+      return Object.assign(appError, { code: 'CHAT_ERROR', severity: 'medium' as const })
+    })
   })
 
   describe('initial state', () => {

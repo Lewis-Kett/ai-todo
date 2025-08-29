@@ -55,6 +55,10 @@ describe('useTodoItem', () => {
   const mockToast = {
     showSuccess: jest.fn(),
     showError: jest.fn(),
+    showWarning: jest.fn(),
+    showInfo: jest.fn(),
+    showLoading: jest.fn(),
+    dismiss: jest.fn(),
   }
 
   beforeEach(() => {
