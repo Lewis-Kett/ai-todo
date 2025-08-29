@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +14,7 @@ interface TodoItemClientProps {
   todo: Todo
 }
 
-export function TodoItemClient({ todo }: TodoItemClientProps) {
+export const TodoItemClient = memo(function TodoItemClient({ todo }: TodoItemClientProps) {
   const { 
     optimisticTodo,
     isPending,
@@ -123,4 +124,4 @@ export function TodoItemClient({ todo }: TodoItemClientProps) {
       </Button>
     </div>
   )
-}
+})
